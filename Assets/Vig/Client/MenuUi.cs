@@ -119,6 +119,12 @@ namespace Vig.Client
                     Ui.Text("name", card, def.Name.ToUpperInvariant(), 30, Color.white, TextAlignmentOptions.Top, new Vector2(0, 1), new Vector2(1, 1), new Vector2(16, -70), new Vector2(-16, -18), true);
                     Ui.Text("price", card, $"{def.Price} MARKERS", 22, Look.Marker, TextAlignmentOptions.Top, new Vector2(0, 1), new Vector2(1, 1), new Vector2(16, -104), new Vector2(-16, -72), true);
                     Ui.Text("text", card, string.Join(" ", def.Text), 22, new Color(0.85f, 0.95f, 0.88f), TextAlignmentOptions.Top, new Vector2(0, 0), new Vector2(1, 1), new Vector2(18, 90), new Vector2(-18, -120));
+                    // what it changes, in numbers (U31): the card's middle was empty
+                    if (def.Change != null)
+                    {
+                        Ui.Panel("change rule", card, new Color(1, 1, 1, 0.08f), new Vector2(0, 0), new Vector2(1, 0), new Vector2(24, 196), new Vector2(-24, 198));
+                        Ui.Text("change", card, def.Change, 21, Look.Gold, TextAlignmentOptions.Center, new Vector2(0, 0), new Vector2(1, 0), new Vector2(18, 110), new Vector2(-18, 190), true);
+                    }
                     Ui.Text("systems", card, "TOUCHES: " + string.Join(", ", def.Systems).ToUpperInvariant(), 15, new Color(0.5f, 0.7f, 0.55f), TextAlignmentOptions.Bottom, new Vector2(0, 0), new Vector2(1, 0), new Vector2(16, 76), new Vector2(-16, 100));
                     string why = CageSystem.CantBuy(g, me, def.Id);
                     var id = def.Id;

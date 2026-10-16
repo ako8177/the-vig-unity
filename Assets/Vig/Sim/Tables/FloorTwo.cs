@@ -116,7 +116,14 @@ namespace Vig.Sim.Tables
             if (t.Point == 0)
             {
                 if (sum == 7 || sum == 11) return StartResult.Of(Done(true, $"{sum} ON THE COME-OUT WINS"));
-                if (sum == 2 || sum == 3 || sum == 12) return StartResult.Of(Done(false, $"{sum}: CRAPS"));
+                if (sum == 2 || sum == 3 || sum == 12)
+                {
+                    // Hot Shooter: the come-out's craps hand the bet back (DESIGN.md §15)
+                    if (!p.Charms.Contains("shooter")) return StartResult.Of(Done(false, $"{sum}: CRAPS"));
+                    var push = Done(false, $"{sum}: CRAPS, BUT THE HOT SHOOTER GETS THE BET BACK");
+                    push.Ret = bet;
+                    return StartResult.Of(push);
+                }
                 t.Point = sum;
                 g.Emit(new SimEvent { T = "roll", Player = p.Id, Table = Id, Dice = new List<int> { d0, d1 }, Point = sum, Text = $"THE POINT IS {sum}", Ticks = Rules.Ticks(Def.ResolveS) });
                 return StartResult.Pending;
@@ -163,11 +170,13 @@ namespace Vig.Sim.Tables
             for (int r = 0; r < Rows; r++) path.Add(g.Rng.Int(0, 1));
             int slot = path.Sum();
             double factor = Rules.PayoutFactor(g, p, Id);
-            int ret = Js.RoundInt(bet * Mult[slot] * factor);
+            // Center Pin: the center returns the stake (and still marks you: DESIGN.md §15)
+            bool pin = slot == 4 && p.Charms.Contains("centerpin");
+            int ret = pin ? bet : Js.RoundInt(bet * Mult[slot] * factor);
             return StartResult.Of(new Outcome
             {
                 Table = Id, Player = p.Id, Bet = bet, Ret = ret, Win = ret > bet, Factor = factor, Path = path, Slot = slot,
-                Text = slot == 4 ? $"THE CENTER: ${ret} AND A MARK" : $"{Js.Num(Mult[slot])}x: ${ret}",
+                Text = slot == 4 ? (pin ? $"THE CENTER PIN: ${ret} BACK, AND A MARK" : $"THE CENTER: ${ret} AND A MARK") : $"{Js.Num(Mult[slot])}x: ${ret}",
             });
         }
 

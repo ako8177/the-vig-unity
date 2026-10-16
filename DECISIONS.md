@@ -153,3 +153,10 @@ Every decision with its reason. The TS game's log (#1-#87) is frozen in `docs/DE
   it's a low table's slow loss and its odds are printed on the screen and on the toggle. Judged on the deal,
   paid when the hand lands. Flag: a pair side bet with a three-step paytable is a real casino bet (not from a
   shipped game); the pays here are derived from our six-deck shoe and the tier rule, not copied.
+- **U31 2026-10-16: A third set of charms, one per game that had none**: Center Pin (Peg Drop), Hot Shooter
+  (craps), Double Vision (PAIRS), Good Company (the regulars), Tailwind (Crash); 20 charms now (DESIGN.md §15).
+  The catalogue's cards print each charm's change in numbers (`CharmDef.Change`). Golden traces regenerated: the
+  catalogue and the Boon wheel draw from the longer list.
+- **U32 2026-10-16: Crash gets a crowd.** Three more railbirds at the Furnace's monitor on floor 2; as the climb
+  nears 5x they lean in, raise their fists and shake; every crash gets a groan. Presentation, plus three NPC
+  colliders on floor 2 (clear of the stand points and the walk in; checked).

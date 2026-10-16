@@ -914,6 +914,7 @@ namespace Vig.Sim.Systems
                 p.Seat = null;
                 p.ApronUsed = false;
                 p.FootUsed = false;
+                p.Company = 0;
                 p.RedStreak = 0;
                 p.HotTable = null;
                 p.HotRun = 0;

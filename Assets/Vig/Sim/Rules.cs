@@ -32,6 +32,8 @@ namespace Vig.Sim
             // Hot Hand: +10% a win in a row at this table, to +50% (DESIGN.md §12)
             if (p.HotTable == table && p.HotRun > 0 && p.Charms.Contains("hothand")) f *= 1 + 0.1 * Math.Min(5, p.HotRun);
             if (s.Marks.Any(m => m.Id == "colddeck" && m.Player == -1)) f *= Marks.ColdDeck;
+            // Tailwind: Crash's cash-outs pay +10% (DESIGN.md §15)
+            if (table == "crash" && p.Charms.Contains("tailwind")) f *= 1.1;
             var tier = Data.Tables.ById(table)?.Tier;
             if (tier != null)
                 foreach (var b in p.Buffs)

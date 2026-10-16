@@ -49,6 +49,8 @@ namespace Vig.Sim
         public int HotRun;
         /// <summary>Rabbit's Foot already spent this night</summary>
         public bool FootUsed;
+        /// <summary>Good Company's markers this night (U31: at most 3)</summary>
+        public int Company;
     }
 
     /// <summary>A card: rank 1 (ace) .. 13 (king), suit 0..3 (0, 1 red; 2, 3 black).</summary>

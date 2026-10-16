@@ -80,7 +80,7 @@ namespace Vig.Client
                     $"{Ui.Col("LOSING COSTS", Look.Smoke)}  {Ui.Col(def.LossText, def.Tier == "high" ? Look.High : def.Tier == "mid" ? Look.MidHi : Look.Bone)}";
                 if (Id == SideBets.Pairs.Table)
                 {
-                    var sb = SideBets.Pairs;
+                    var sb = SideBets.PairsFor(me);
                     odds.text += $"\n<size=15>{Ui.Col("SIDE: PAIRS", Look.Gold)} {Ui.Money(sb.Mins * Vig.Sim.Data.Tables.LimitsOf(def, s.Floor).Min)}  {Ui.Col("WIN", Look.Smoke)} {Pct(SideBets.WinP(sb))}  {Ui.Col("PAYS", Look.Smoke)} PAIR {sb.Mixed}:1, COLOR {sb.Colored}:1, SUITED {sb.Suited}:1  {Ui.Col("RTP", Look.Smoke)} {SideBets.ExactRtp(sb):0.###}</size>";
                 }
             }

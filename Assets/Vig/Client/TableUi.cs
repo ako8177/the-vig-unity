@@ -316,7 +316,7 @@ namespace Vig.Client
                     named["deal"].gameObject.SetActive(!play);
                     named["deal"].interactable = !busy && canBet;
                     // the side bet: on or off, its price and pays printed on the button
-                    var sbd = SideBets.Pairs;
+                    var sbd = SideBets.PairsFor(me);
                     int sideAmt = sbd.Mins * Vig.Sim.Data.Tables.LimitsOf(Vig.Sim.Data.Tables.ById(seat), s.Floor).Min;
                     named["pairs"].gameObject.SetActive(!play);
                     named["pairs"].interactable = !busy;

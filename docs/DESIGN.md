@@ -476,3 +476,20 @@ Bandit's 0.95 does; 8/15/30 would cross it. The shoe in play isn't fresh, so a s
 little with what's been dealt; the printed figure is the fresh shoe's, as Twenty-One's own RTP is the endless
 shoe's. SimCheck measures it over 100,000 hands: 0.928, inside ±0.051 of 0.939 (one bet's spread is about 4 per
 $1). The side bet's payout takes your payout factor (marks, Cold Deck), as every payout does.
+
+## 15. The third set of charms: one for each game that had none (U31)
+
+| charm | price | what it does | the number |
+|---|---|---|---|
+| Center Pin | 4 | Peg Drop's center slot (70 of 256 drops) pays 1x, not 0.4x; it still marks you | RTP 300/256 = 1.172 → 342/256 = **1.336** |
+| Hot Shooter | 3 | craps on the come-out (2, 3, 12: 4 of 36) hands the bet back | RTP 0.986 + 4/36 = **1.097** |
+| Double Vision | 2 | PAIRS pays 8/15/30, not 6/12/25 | (9×12 + 16×6 + 31×5)/311 = **1.154**, from 0.939 |
+| Good Company | 3 | +1 marker when you, Dot and Ike all win on a dealer bust; 3 a night | measured: 1 hand in 6.4 (SimCheck), so about one marker a minute at the table until the cap |
+| Tailwind | 3 | Crash's cash-outs pay x1.1 (shown as the payout factor) | cashing at 3x: 1.246 → **1.370**; the crash and its life cost are unchanged |
+
+Each moves one game, prices sit with the second set's (2-4 markers), and the enumerated returns are checked by
+SimCheck (`charm math`). Center Pin is the strongest (+0.164) and the most expensive, and it keeps the mark: the
+center still costs you Peg Drop's payouts, so the rotation lesson holds. Hot Shooter turns a low table above 1
+the way Lucky Seven does the Bandit (0.950 → 1.070). Double Vision is cheap because PAIRS is a $50 bet.
+
+Every charm card in the catalogue now prints what it changes, before → after where it's a number.

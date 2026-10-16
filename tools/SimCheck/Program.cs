@@ -345,6 +345,7 @@ static class Program
     static void RuleChecks()
     {
         RegularsCheck(100000);
+        CharmMath();
         // DECISIONS U5: a locked charm can't come off the Boon wheel; an unlocked one can
         var locked = BoonCharms(new string[0]);
         Check(locked.Count > 0, "rules: no spin landed on the Boon wheel's charm slot");
@@ -408,6 +409,24 @@ static class Program
         Console.WriteLine($"ok   lessons: night 1 safe {Rate(safe1, Night1):P0} / mid {Rate(mid1, Night1):P0}; walks out easy {Rate(mid1, r => r.WalkedOut):P0} / house {Rate(midHouse, r => r.WalkedOut):P0}; floor 2 night 4 safe {Rate(safe2, Night1):P0} / mid {Rate(mid2, Night1):P0}; crash lives 2x {crash2.Average(r => r.TableLives):0.00} / 10x {crash10.Average(r => r.TableLives):0.00}");
     }
 
+    /// <summary>U31: the third set's numbers, enumerated, match their derivations (DESIGN.md §15).</summary>
+    static void CharmMath()
+    {
+        double pin = 0;
+        for (int k = 0; k <= PegDrop.Rows; k++)
+        {
+            double ways = 1; for (int i = 0; i < k; i++) ways = ways * (PegDrop.Rows - i) / (i + 1);
+            pin += ways / 256 * (k == 4 ? 1 : PegDrop.Mult[k]);
+        }
+        var craps = (Craps)TableModule.ById("craps");
+        double shooter = craps.Odds().Rtp + 4 / 36.0;
+        double vision = SideBets.ExactRtp(SideBets.PairsVision);
+        Check(Math.Abs(pin - 342 / 256.0) < 1e-9, $"charm math: Center Pin's Peg Drop returns {pin:0.0000}, not 1.336");
+        Check(Math.Abs(shooter - 1.097) < 0.0005, $"charm math: Hot Shooter's craps returns {shooter:0.0000}, not 1.097");
+        Check(Math.Abs(vision - 359 / 311.0) < 1e-9, $"charm math: Double Vision's PAIRS returns {vision:0.0000}, not 1.154");
+        Console.WriteLine($"ok   charm math: Center Pin {pin:0.000}, Hot Shooter {shooter:0.000}, Double Vision {vision:0.000}, Tailwind at 3x {3 * Crash.Reach(3) * 1.1:0.000}");
+    }
+
     /// <summary>U29: the regulars share your shoe but not your odds. Play `n` hands of basic strategy with them
     /// at the table and measure your return against the exact one; report theirs (DESIGN.md §13).</summary>
     static void RegularsCheck(int n)
@@ -418,7 +437,7 @@ static class Program
         var t = g.State.Tables["twentyone"];
         double bet = 0, ret = 0, sideBet = 0, sideRet = 0;
         var rb = new Dictionary<string, double>(); var rr = new Dictionary<string, double>();
-        int hands = 0, dealerDrewForThem = 0;
+        int hands = 0, dealerDrewForThem = 0, tableWins = 0;
         while (hands < n)
         {
             g.State.Clock = State.NightTicks;
@@ -439,6 +458,7 @@ static class Program
             bet += o.Hands21.Sum(hr => hr.Bet); ret += o.Hands21.Sum(hr => hr.Ret); hands++;
             bool youOut = o.Hands21.All(hr => TwentyOne.HandValue(hr.Cards).total > 21) || (o.Hands21.Count == 1 && TwentyOne.IsNatural(o.Hands21[0].Cards));
             if (youOut && o.Dealer21.Count > 2) dealerDrewForThem++;
+            if (TwentyOne.TableWins(o)) tableWins++;
             foreach (var r in o.Regulars21 ?? new List<RegularHand21>())
             {
                 rb[r.Who] = (rb.TryGetValue(r.Who, out var x) ? x : 0) + r.Bet;
@@ -458,7 +478,7 @@ static class Program
         Check(Math.Abs(side - sideExact) < sideTol, $"side bet: PAIRS returned {side:0.000} over {n} hands, not the printed {sideExact:0.000} (±{sideTol:0.000})");
         Console.WriteLine($"ok   side bet: PAIRS {side:0.000} over {n} hands (printed {sideExact:0.000} ±{sideTol:0.000}, wins {SideBets.WinP(SideBets.Pairs):P1})");
         Console.WriteLine($"ok   regulars: {n} hands, yours {rtp:0.000} (printed {exact:0.000} ±{tol:0.000}); " +
-            string.Join(", ", Regulars.All.Select(d => $"{d.Name} ({d.Style}) {rr[d.Id] / rb[d.Id]:0.000}")) + $"; the dealer drew for them {dealerDrewForThem} times");
+            string.Join(", ", Regulars.All.Select(d => $"{d.Name} ({d.Style}) {rr[d.Id] / rb[d.Id]:0.000}")) + $"; the dealer drew for them {dealerDrewForThem} times; the whole table won on a bust 1 hand in {n / (double)Math.Max(1, tableWins):0.0}");
     }
 
     // ------------------------------------------------------------------ data validation

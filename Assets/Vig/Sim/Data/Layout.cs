@@ -352,6 +352,10 @@ namespace Vig.Sim.Data
                 foreach (var n in npcs) if (n.Table != null && swap.TryGetValue(n.Table, out var to)) n.Table = to;
                 // the croupier at the real wheel works it: she sends the ball round when a spin goes up
                 foreach (var n in npcs) if (n.Role == "dealer" && n.X == -6.5 && n.Z == 3.35) n.Table = "roulette";
+                // a crowd for Crash (U32): three more railbirds at the Furnace's monitor, clear of the walk in
+                npcs.Add(npc("watcher", 1.45, -6.3, E + 0.3, false, "back", "crash"));
+                npcs.Add(npc("watcher", 5.8, -6.2, Wd - 0.3, false, "back", "crash"));
+                npcs.Add(npc("watcher", 6.3, -4.8, Wd - 0.7, false, "back", "crash"));
             }
 
             var walls = new List<Collider>();

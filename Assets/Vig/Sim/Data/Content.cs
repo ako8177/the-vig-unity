@@ -49,6 +49,8 @@ namespace Vig.Sim.Data
     public sealed class CharmDef
     {
         public string Id, Name, Derivation;
+        /// <summary>what it changes, before → after where it's a number (its derivation says why)</summary>
+        public string Change;
         public int Price;
         /// <summary>the systems it touches: table | circuit | collector | lives (one is enough: DECISIONS #85)</summary>
         public string[] Systems;
@@ -67,52 +69,68 @@ namespace Vig.Sim.Data
     {
         public static readonly CharmDef[] All =
         {
-            new CharmDef { Id = "luckyfuse", Name = "Lucky Fuse", Price = 3, Systems = new[] { "circuit", "collector", "lives" },
+            new CharmDef { Id = "luckyfuse", Change = "A HARD-WON CIRCUIT: +1 LIFE", Name = "Lucky Fuse", Price = 3, Systems = new[] { "circuit", "collector", "lives" },
                 Text = new[] { "WIN A CIRCUIT AFTER TAKING", "A SHOCK IN IT: +1 LIFE" },
                 Derivation = "DESIGN.md §5 (DECISIONS #53, #80): win the Circuit having taken a shock in it, +1 life; price 3" },
-            new CharmDef { Id = "overclock", Name = "Overclock", Price = 4, Systems = new[] { "circuit", "table" },
+            new CharmDef { Id = "overclock", Change = "STAKES AND WINS x2 FOR 60 S", Name = "Overclock", Price = 4, Systems = new[] { "circuit", "table" },
                 Text = new[] { "SURVIVE A SHOCK: STAKES AND", "WINS x2, FIRST 60 S OF THE NIGHT" },
                 Derivation = "DESIGN.md §5 (DECISIONS #9, #54, #80): stakes x2 (so wins x2, odds unchanged) for the next night's first 60 s after surviving a shock; price 4" },
-            new CharmDef { Id = "leadapron", Name = "Lead Apron", Price = 3, Systems = new[] { "table", "circuit", "lives" },
+            new CharmDef { Id = "leadapron", Change = "ONE LIFE A NIGHT, SAVED", Name = "Lead Apron", Price = 3, Systems = new[] { "table", "circuit", "lives" },
                 Text = new[] { "THE FIRST LIFE YOU WOULD LOSE", "EACH NIGHT COSTS NOTHING" },
                 Derivation = "DESIGN.md §5 (DECISIONS #53): the first life lost each night (blood table, Circuit or shortfall) costs nothing; price 3" },
-            new CharmDef { Id = "magnet", Name = "Marker Magnet", Price = 3, Systems = new[] { "table", "circuit" },
+            new CharmDef { Id = "magnet", Change = "MARKERS x2 (HIGH WINS, DEAD LEVERS)", Name = "Marker Magnet", Price = 3, Systems = new[] { "table", "circuit" },
                 Text = new[] { "HIGH-TABLE WINS: x2 MARKERS", "DEAD LEVERS IN THE CIRCUIT: x2 MARKERS" },
                 Derivation = "DESIGN.md §5 (DECISIONS #9, #80): double markers from high-table wins and from dead levers you pull; price 3" },
-            new CharmDef { Id = "insulated", Name = "Insulated Kit", Price = 4, Systems = new[] { "circuit", "table" }, Unlock = 0,
+            new CharmDef { Id = "insulated", Change = "THE CIRCUIT: WIN 50% → 76%", Name = "Insulated Kit", Price = 4, Systems = new[] { "circuit", "table" }, Unlock = 0,
                 Text = new[] { "THE CIRCUIT: TRACE 2 WIRES FREE", "RUBBER SOLES: STICKY FLOOR CAN'T SLOW YOU" },
                 Derivation = "DESIGN.md §5 (DECISIONS #81): unlocked by killing the first Collector at the Circuit; two free traces a duel (you win 76%, not 50%); the team mark Sticky Floor doesn't slow its wearer; price 4" },
             // ---- the second set (DESIGN.md §12, U16)
-            new CharmDef { Id = "hothand", Name = "Hot Hand", Price = 4, Systems = new[] { "table" },
+            new CharmDef { Id = "hothand", Change = "A STREAK: PAYOUTS UP TO x1.5", Name = "Hot Hand", Price = 4, Systems = new[] { "table" },
                 Text = new[] { "EACH WIN IN A ROW AT A TABLE:", "+10% ON ITS PAYOUTS (UP TO +50%)" },
                 Derivation = "DESIGN.md §12: +10% a win in a row at the same table, capped at +50%; a loss or a new table resets; price 4" },
-            new CharmDef { Id = "redrover", Name = "Red Rover", Price = 3, Systems = new[] { "table", "lives" },
+            new CharmDef { Id = "redrover", Change = "RED LINE DANGER CALL: 2.5x → 4x", Name = "Red Rover", Price = 3, Systems = new[] { "table", "lives" },
                 Text = new[] { "RED LINE: THE CALL THAT COULD", "COST A LIFE PAYS 4x, NOT 2.5x" },
                 Derivation = "DESIGN.md §12: at two losses in a row (one from a life) a Red Line win pays 4x; the danger call becomes the tempting one; price 3" },
-            new CharmDef { Id = "counter", Name = "Card Counter", Price = 3, Systems = new[] { "table" },
+            new CharmDef { Id = "counter", Change = "TWENTY-ONE RTP 0.992 → 1.015", Name = "Card Counter", Price = 3, Systems = new[] { "table" },
                 Text = new[] { "TWENTY-ONE: SEE THE COUNT;", "A NATURAL PAYS 2:1" },
                 Derivation = "DESIGN.md §12: naturals pay 2:1 (RTP about +0.023) and the screen shows the running count; price 3" },
-            new CharmDef { Id = "snake", Name = "Snake Charmer", Price = 5, Systems = new[] { "table", "lives" }, Unlock = 1,
+            new CharmDef { Id = "snake", Change = "DEAD MAN'S RTP 1.50 → 1.67, NO LIFE", Name = "Snake Charmer", Price = 5, Systems = new[] { "table", "lives" }, Unlock = 1,
                 Text = new[] { "DEAD MAN'S HAND: SNAKE EYES", "WINS 6x INSTEAD OF A LIFE" },
                 Derivation = "DESIGN.md §12: snake eyes becomes a win (10 of 36 x 6 = RTP 1.67, no life); unlocked by killing the second Collector; price 5" },
-            new CharmDef { Id = "interest", Name = "Compound Interest", Price = 4, Systems = new[] { "collector" },
+            new CharmDef { Id = "interest", Change = "+10% OF THE BANK A NIGHT (MAX $600)", Name = "Compound Interest", Price = 4, Systems = new[] { "collector" },
                 Text = new[] { "EVERY NEW NIGHT: +10% OF", "THE BANK (UP TO +$600)" },
                 Derivation = "DESIGN.md §12: +10% of the bank at the start of each night after the first, at most $600, once for the team; price 4" },
-            new CharmDef { Id = "comp", Name = "Comp Card", Price = 2, Systems = new[] { "table" },
+            new CharmDef { Id = "comp", Change = "DRINKS $0, THEIR EDGE x2 AS LONG", Name = "Comp Card", Price = 2, Systems = new[] { "table" },
                 Text = new[] { "DRINKS ARE ON THE HOUSE;", "THEIR EDGE LASTS TWICE AS LONG" },
                 Derivation = "DESIGN.md §12: drinks cost $0 and their edge runs 2x its buzz; price 2" },
-            new CharmDef { Id = "seven", Name = "Lucky Seven", Price = 3, Systems = new[] { "table" },
+            new CharmDef { Id = "seven", Change = "BANDIT RTP 0.950 → 1.070", Name = "Lucky Seven", Price = 3, Systems = new[] { "table" },
                 Text = new[] { "THE BANDIT: 7 7 7 PAYS 25x", "(NOT 10x)" },
                 Derivation = "DESIGN.md §12: a 7-line pays 25x; the Bandit's RTP goes 0.950 → 1.070 (4^9 grids enumerated); price 3" },
-            new CharmDef { Id = "foot", Name = "Rabbit's Foot", Price = 4, Systems = new[] { "table", "lives" },
+            new CharmDef { Id = "foot", Change = "ONE LOSING ROLL A NIGHT, REROLLED", Name = "Rabbit's Foot", Price = 4, Systems = new[] { "table", "lives" },
                 Text = new[] { "ONCE A NIGHT: A LOSING ROLL AT", "HI-LO OR DEAD MAN'S IS ROLLED AGAIN" },
                 Derivation = "DESIGN.md §12: the first losing Hi-Lo or Dead Man's roll each night is rerolled and the reroll stands; price 4" },
-            new CharmDef { Id = "chute", Name = "Parachute", Price = 4, Systems = new[] { "table", "lives" },
+            new CharmDef { Id = "chute", Change = "CRASH: A CRASH COSTS 50%, NEVER A LIFE", Name = "Parachute", Price = 4, Systems = new[] { "table", "lives" },
                 Text = new[] { "CRASH: A CRASH HANDS HALF YOUR", "BET BACK AND NEVER COSTS A LIFE" },
                 Derivation = "DESIGN.md §12: a crash returns half the stake and its life cost is gone; price 4" },
-            new CharmDef { Id = "thumb", Name = "Croupier's Thumb", Price = 3, Systems = new[] { "table" },
+            new CharmDef { Id = "thumb", Change = "ROULETTE NUMBERS RTP 0.973 → 1.216", Name = "Croupier's Thumb", Price = 3, Systems = new[] { "table" },
                 Text = new[] { "ROULETTE: ONE NUMBER", "PAYS 45x (NOT 36x)" },
                 Derivation = "DESIGN.md §12: a straight-up number pays 45x, RTP 45/37 = 1.22 on numbers; price 3" },
+            // ---- the third set: a charm for each game that had none (DESIGN.md §15, U31)
+            new CharmDef { Id = "centerpin", Change = "PEG DROP RTP 1.172 → 1.336", Name = "Center Pin", Price = 4, Systems = new[] { "table" },
+                Text = new[] { "PEG DROP: THE CENTER SLOT PAYS", "1x, NOT 0.4x (IT STILL MARKS YOU)" },
+                Derivation = "DESIGN.md §15: the center (70 of 256 drops) returns the stake: RTP 300/256 = 1.172 → 342/256 = 1.336; price 4" },
+            new CharmDef { Id = "shooter", Change = "CRAPS RTP 0.986 → 1.097", Name = "Hot Shooter", Price = 3, Systems = new[] { "table" },
+                Text = new[] { "CRAPS: 2, 3 OR 12 ON THE COME-OUT", "HANDS YOUR BET BACK" },
+                Derivation = "DESIGN.md §15: the come-out's craps (4 of 36) push instead of losing: RTP 0.986 → 1.097, a low table turned warm; price 3" },
+            new CharmDef { Id = "vision", Change = "PAIRS RTP 0.939 → 1.154", Name = "Double Vision", Price = 2, Systems = new[] { "table" },
+                Text = new[] { "TWENTY-ONE'S PAIRS PAYS", "8:1, 15:1, 30:1 (NOT 6, 12, 25)" },
+                Derivation = "DESIGN.md §15: PAIRS at 8/15/30 returns (9×12 + 16×6 + 31×5)/311 = 1.154, up from 0.939; price 2" },
+            new CharmDef { Id = "company", Change = "+1 MARKER WHEN THE TABLE WINS (3/NIGHT)", Name = "Good Company", Price = 3, Systems = new[] { "table" },
+                Text = new[] { "THE DEALER BUSTS AND THE WHOLE", "TABLE WINS: +1 MARKER (3 A NIGHT)" },
+                Derivation = "DESIGN.md §15: when you, Dot and Ike all win on a dealer bust (about 1 hand in 6, SimCheck), +1 marker, at most 3 a night; price 3" },
+            new CharmDef { Id = "tailwind", Change = "CRASH AT 3x: RTP 1.246 → 1.370", Name = "Tailwind", Price = 3, Systems = new[] { "table" },
+                Text = new[] { "CRASH: EVERY CASH-OUT", "PAYS +10%" },
+                Derivation = "DESIGN.md §15: cash-outs pay x1.1, so cashing at 3x returns 1.246 → 1.370 and the crash risk is unchanged; price 3" },
         };
         static readonly Dictionary<string, CharmDef> byId = All.ToDictionary(c => c.Id);
         public static CharmDef ById(string id) => id != null && byId.TryGetValue(id, out var c) ? c : null;
@@ -252,6 +270,17 @@ namespace Vig.Sim.Data
     public static class SideBets
     {
         /// <summary>Twenty-One's PAIRS: your first two cards make a pair (DESIGN.md §14).</summary>
+        /// <summary>PAIRS with Double Vision (U31): 8/15/30.</summary>
+        public static readonly SideBetDef PairsVision = new SideBetDef
+        {
+            Id = "pairs", Table = "twentyone", Name = "Pairs", Mins = 1, Mixed = 8, Colored = 15, Suited = 30,
+            Text = "YOUR FIRST TWO CARDS A PAIR",
+            Derivation = "DESIGN.md §15: Double Vision's PAIRS, 8/15/30 to one: (9×12 + 16×6 + 31×5)/311 = 1.154",
+        };
+
+        /// <summary>The PAIRS table a player bets on: Double Vision's if they carry it.</summary>
+        public static SideBetDef PairsFor(PlayerState p) => p != null && p.Charms.Contains("vision") ? PairsVision : Pairs;
+
         public static readonly SideBetDef Pairs = new SideBetDef
         {
             Id = "pairs", Table = "twentyone", Name = "Pairs", Mins = 1, Mixed = 6, Colored = 12, Suited = 25,

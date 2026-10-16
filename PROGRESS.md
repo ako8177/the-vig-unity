@@ -147,3 +147,14 @@ PixelLab spend: 0.
 - 257 checks green (golden traces regenerated: the hand state carries the side bet).
 - Dealers move with the game: the croupier at floor 2's wheel and the craps dealer gesture when a spin or a
   throw goes up (every dealer whose table is known does now).
+
+## 2026-10-16: more items, more life (U31, U32)
+
+- **Five new charms** (20 in all), one for each game that had none: Center Pin (Peg Drop's center pays 1x),
+  Hot Shooter (come-out craps hands the bet back), Double Vision (PAIRS pays 8/15/30), Good Company (+1 marker
+  when the whole Twenty-One table wins on a dealer bust, 3 a night), Tailwind (Crash cash-outs +10%). Their
+  returns are enumerated and checked.
+- **The catalogue's cards** print what each charm changes in numbers ("PEG DROP RTP 1.172 → 1.336").
+- **Crash's crowd**: five railbirds at the Furnace that lean in, put their fists up and shake as the climb nears
+  5x, and groan at every crash. Shot 49.
+- 275 checks green.

@@ -132,6 +132,9 @@ namespace Vig.Client
             int shoe = s.Tables.TryGetValue("twentyone", out var t21) && t21.Shoe != null ? t21.Shoe.Count : -1;
             if (lastShoe >= 0 && shoe >= 0 && shoe < lastShoe) Deal("twentyone");
             lastShoe = shoe;
+            // Crash's heat (U32): 0 on the ground, rising to 1 as the climb nears 5x; its crowd leans in, fists up
+            CrashHeat = s.Tables.TryGetValue("crash", out var tc) && tc.Crash != null
+                ? Mathf.Clamp01(((float)Vig.Sim.Tables.Crash.MultAt(g.Tick - tc.Crash.Start) - 1) / 4f) : 0;
             // the other dealers move when a round goes up at their table (a spin, a throw)
             foreach (var kv in s.Tables)
             {
@@ -159,6 +162,8 @@ namespace Vig.Client
 
         readonly Dictionary<string, float> dealt = new Dictionary<string, float>();
         readonly Dictionary<string, int> lastUntil = new Dictionary<string, int>();
+        /// <summary>how far up Crash's climb is (0-1 toward 5x), for its crowd</summary>
+        internal float CrashHeat;
         void Deal(string table) => dealt[table] = now;
         internal float DealtAt(string table) => table != null && dealt.TryGetValue(table, out var t) ? t : -99;
 
@@ -174,6 +179,8 @@ namespace Vig.Client
                     var pl = F.TableOf(o.Table);
                     var at = pl != null ? RoomBuilder.U(pl.X, 0, pl.Z) : Vector3.zero;
                     React(o.Table, net > 0, net >= Feel.BigWin || net <= -Feel.BigWin, at);
+                    // Crash's crowd groans at every crash, not only the big ones
+                    if (o.Crashed == true) foreach (var p in crowd) if (p.Spot.Table == "crash") { p.Groan = 1.6f; p.Cheer = 0; }
                     // the regulars (U29) react to their own hands: a win lifts them, a bust puts their head in their hands
                     if (o.Regulars21 != null)
                         foreach (var p in crowd)
@@ -456,6 +463,19 @@ namespace Vig.Client
                         if (Rand(idx, 8) < 0.5f) { shLa = shRa = 0.12f; elLa = elRa = 1.5f; abL = abR = -0.5f; }
                         else shLa = 0.06f + 0.03f * Mathf.Sin(tt);
                         lean = seat != null && seat == Spot.Table ? 0.12f : 0;
+                        // Crash's crowd as it climbs: leaning in, then fists coming up past halfway, shaking near the top
+                        if (Spot.Table == "crash" && ppl.CrashHeat > 0)
+                        {
+                            float h = ppl.CrashHeat;
+                            lean = 0.12f + 0.18f * h;
+                            if (h > 0.4f)
+                            {
+                                float up = Mathf.Clamp01((h - 0.4f) / 0.6f), shake = h > 0.8f ? Mathf.Sin(tt * 22) * 0.08f : 0;
+                                shLa = shRa = 0.4f + 2.0f * up + shake;
+                                elLa = elRa = 1.6f - 0.8f * up;
+                                abL = abR = 0.15f;
+                            }
+                        }
                         break;
                 }
                 if (walk)

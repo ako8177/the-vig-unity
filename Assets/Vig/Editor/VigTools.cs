@@ -406,6 +406,21 @@ namespace Vig.EditorTools
             list.Add(Seated("42_pegdrop_landed", "pegdrop", 140, play => { }));
             list.Add(Seated("43_crash_climbing", "crash", 150, play => play.G.Submit(0, Command.Spin("crash"))));
             list.Add(Seated("44_crash_after", "crash", 900, play => { }));
+            // Crash's crowd mid-climb (U32): leaning in, fists coming up
+            list.Add(new Shot
+            {
+                Name = "49_crash_crowd", Eye = U(0.9, 2.3, -3.2), At = U(3.8, 1.1, -6.6),
+                Before = play =>
+                {
+                    SitAt(play, "crash");
+                    play.G.State.Bank = 6000;
+                    play.G.Submit(0, Command.Spin("crash"));
+                    Run(play, 1);
+                    // for the picture only: this climb goes high (the sim drew where it crashes)
+                    if (play.G.State.Tables["crash"].Crash != null) play.G.State.Tables["crash"].Crash.CrashAt = 25;
+                    Run(play, 330);
+                },
+            });
             // your bet as chips on the felt (U27): the eye looks down at the near corner of the Hi-Lo table
             var chipShot = Seated("45_hilo_chips", "hilo", 150, play => play.G.Submit(0, Command.CallIt("hilo", "hi")));
             var sitHilo = chipShot.Before;

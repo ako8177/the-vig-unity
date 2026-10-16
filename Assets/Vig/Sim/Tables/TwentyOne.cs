@@ -351,6 +351,21 @@ namespace Vig.Sim.Tables
             return Settle(g, p);
         }
 
+        /// <summary>Did the whole table win on a dealer bust (you, every hand of yours, and every regular)?</summary>
+        public static bool TableWins(Outcome o) =>
+            o.Dealer21 != null && HandValue(o.Dealer21).total > 21 && o.Hands21 != null && o.Hands21.All(h => h.Ret > h.Bet)
+            && o.Regulars21 != null && o.Regulars21.Count > 0 && o.Regulars21.All(r => r.Ret > r.Bet);
+
+        /// <summary>Good Company (U31): a marker when the whole table wins on a dealer bust, 3 a night.</summary>
+        public override void Resolve(Game g, PlayerState p, Outcome o)
+        {
+            if (p.Charms.Contains("company") && p.Company < 3 && TableWins(o))
+            {
+                p.Company++;
+                Rules.AddMarkers(g, 1, "good company");
+            }
+        }
+
         public override string Id => "twentyone";
         public override string[] Cmds => new[] { "bet", "call" };
 
@@ -382,7 +397,8 @@ namespace Vig.Sim.Tables
                 if (!BetOf(g, Def, cmd.Amount, out int b, out string why)) return StartResult.Refuse(why);
                 int amount = Rules.StakeFor(p, b);
                 // PAIRS rides beside the hand at the table minimum (U30)
-                int side = cmd.Call == SideBets.Pairs.Id ? SideBets.Pairs.Mins * Data.Tables.LimitsOf(Def, g.State.Floor).Min : 0;
+                var pairs = SideBets.PairsFor(p);
+                int side = cmd.Call == pairs.Id ? pairs.Mins * Data.Tables.LimitsOf(Def, g.State.Floor).Min : 0;
                 if (side > 0 && g.State.Bank < amount + side) return StartResult.Refuse("the bank can't cover the side bet too");
                 var no = Stake(g, amount);
                 if (no != null) return StartResult.Refuse(no);
@@ -413,7 +429,7 @@ namespace Vig.Sim.Tables
                 };
                 if (side > 0)
                 {
-                    var (word, pays) = SideBets.Judge(SideBets.Pairs, mine[0], mine[1]);
+                    var (word, pays) = SideBets.Judge(pairs, mine[0], mine[1]);
                     t.Hand.Side = side;
                     t.Hand.SideWord = word;
                     t.Hand.SideRet = pays > 0 ? Js.RoundInt(side * (pays + 1) * Rules.PayoutFactor(g, p, Id)) : 0;
