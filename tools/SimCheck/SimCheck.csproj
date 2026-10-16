@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The sim's checks, outside Unity: the same source files Unity compiles (Assets/Vig/Sim), held to
+       C# 9 so anything that builds here builds in Unity 6. `dotnet run -c Release` from this folder. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Assets/Vig/Sim/**/*.cs" />
+    <Compile Include="*.cs" />
+  </ItemGroup>
+</Project>
