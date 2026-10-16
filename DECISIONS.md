@@ -45,3 +45,9 @@ Every decision with its reason. The TS game's log (#1-#87) is frozen in `docs/DE
   player renders the same room as the editor).
 - **U10 2026-10-15: Nothing new is derivative.** The port adds no mechanic, number, name or UI that
   wasn't in the TS game; its existing flags (TS #58, #62, #80) carry over unchanged.
+- **U11 2026-10-15: Unity is the game; the TS game is retired for new work** (owner: "i want to focus
+  unity"). `../the-vig` stays online as it is but gets no new features or rule changes. So, per U4,
+  rule changes now land here only: the golden traces stay as a regression snapshot of the ported
+  rules, and when a rule changes on purpose the affected traces are regenerated from the C# sim (a C#
+  trace writer gets built the first time that's needed) with the reason written here. U5's bug is
+  fixed here alone, with its traces regenerated. The repo is public: github.com/ako8177/the-vig-unity.

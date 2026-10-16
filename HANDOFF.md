@@ -6,9 +6,11 @@ Read this first, every session.
 
 The project was made today from `../the-vig` at 292a1e1 (U1). The sim is ported exactly and proven
 against the TS sim (U4); floor 1 is built by code in the new look (U2, U8) and the whole night is
-playable by keyboard (U7). PROGRESS.md lists what is and isn't ported. Nothing is pushed: the repo is
-local (`git log`), with no GitHub remote yet. **Ask the owner** whether to create
-`github.com/ako8177/the-vig-unity` (public or private) and push.
+playable by keyboard (U7). PROGRESS.md lists what is and isn't ported. The repo is public at
+github.com/ako8177/the-vig-unity. The owner chose to focus on Unity: the TS game is retired for new
+work (U11).
+Two sessions were started on 2026-10-15: the people (the Collector first) in Blender, and the table
+animations.
 
 **Ask the owner** after their first walk round:
 1. Does the look land? (`shots/`, or press Play.) The levers: light intensities in `RoomBuilder`
@@ -16,8 +18,7 @@ local (`git log`), with no GitHub remote yet. **Ask the owner** whether to creat
    `Look.Neon` and `Neon.Text`.
 2. Which comes next: the people (the Collector in his chair first), the table animations, the house,
    or sound?
-3. Is the TS game retired now, or do both continue? (U4: it decides how rule changes land.)
-4. U5: fix the Boon wheel's locked-charm bug in both games?
+3. U5: fix the Boon wheel's locked-charm bug (here only, U11)?
 
 ## Next (in order, unless the owner picks)
 

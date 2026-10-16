@@ -24,8 +24,8 @@ everything in the room built by code from the layout data (no hand-placed scene 
 - **The port is exact.** `tools/golden/traces` hold the TS sim's state hash and events after every
   tick of 16 driven runs; `tools/SimCheck` replays them through the C# sim and must match every tick.
   JS number semantics live in `Core/Js.cs` (`Js.Round`, `Js.Num`); tables are iterated in
-  `State.TableIds` order. A deliberate rule change: change both games and regenerate the traces
-  (`node tools/golden/build.mjs`), or record in DECISIONS.md that the TS game is retired (U4).
+  `State.TableIds` order. The TS game is retired (U11): a deliberate rule change lands here only,
+  the affected traces are regenerated from the C# sim, and DECISIONS.md says why.
 - Content is typed data in `Assets/Vig/Sim/Data/`. **Every number has a derivation** naming a
   `DESIGN.md` section; SimCheck's data checks enforce it, recompute every table's RTP from its
   outcomes, and check the tier rule.
