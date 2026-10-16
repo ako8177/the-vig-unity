@@ -350,6 +350,8 @@ namespace Vig.Sim.Data
             {
                 var swap = new Dictionary<string, string> { { "twentyone", "craps" }, { "bandit", "roulette" }, { "hilo", "pegdrop" }, { "wheel", "hilo" }, { "redline", "crash" }, { "deadman", "redline" } };
                 foreach (var n in npcs) if (n.Table != null && swap.TryGetValue(n.Table, out var to)) n.Table = to;
+                // the croupier at the real wheel works it: she sends the ball round when a spin goes up
+                foreach (var n in npcs) if (n.Role == "dealer" && n.X == -6.5 && n.Z == 3.35) n.Table = "roulette";
             }
 
             var walls = new List<Collider>();

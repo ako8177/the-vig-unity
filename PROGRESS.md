@@ -145,3 +145,5 @@ PixelLab spend: 0.
   (6:1, 12:1 one color, 25:1 one suit; returns 0.939, measured 0.928 over 100,000 hands). Its odds are on the
   table screen and the toggle; the screen calls it as soon as your second card lands.
 - 257 checks green (golden traces regenerated: the hand state carries the side bet).
+- Dealers move with the game: the croupier at floor 2's wheel and the craps dealer gesture when a spin or a
+  throw goes up (every dealer whose table is known does now).

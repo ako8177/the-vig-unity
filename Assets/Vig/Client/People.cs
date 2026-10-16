@@ -132,6 +132,13 @@ namespace Vig.Client
             int shoe = s.Tables.TryGetValue("twentyone", out var t21) && t21.Shoe != null ? t21.Shoe.Count : -1;
             if (lastShoe >= 0 && shoe >= 0 && shoe < lastShoe) Deal("twentyone");
             lastShoe = shoe;
+            // the other dealers move when a round goes up at their table (a spin, a throw)
+            foreach (var kv in s.Tables)
+            {
+                int until = kv.Value.Until;
+                if (until != 0 && (!lastUntil.TryGetValue(kv.Key, out var was) || was != until)) Deal(kv.Key);
+                lastUntil[kv.Key] = until;
+            }
             string seat = s.Phase == Phase.Floor ? me.Seat : null;
             Vector3? seatAt = null;
             if (seat != null)
@@ -151,6 +158,7 @@ namespace Vig.Client
             Tick(g, Mathf.Max(0, g.Tick - (g == lastGame ? lastTick : 0)) / (float)State.TicksPerS, you);
 
         readonly Dictionary<string, float> dealt = new Dictionary<string, float>();
+        readonly Dictionary<string, int> lastUntil = new Dictionary<string, int>();
         void Deal(string table) => dealt[table] = now;
         internal float DealtAt(string table) => table != null && dealt.TryGetValue(table, out var t) ? t : -99;
 
