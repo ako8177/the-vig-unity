@@ -15,11 +15,11 @@ namespace Vig.Sim.Data
     {
         public static readonly Num NightS = new Num(360, "DESIGN.md §1: a night is 360 s");
         public static readonly Num NightsPerFloor = new Num(3, "DESIGN.md §1: three nights a floor, then the stairs down");
-        public static readonly Num Floors = new Num(2, "DESIGN.md §1 (U13): a run is floor 1 then floor 2");
-        public static readonly Num Nights = new Num(6, "DESIGN.md §1 (U13): three nights a floor, two floors");
+        public static readonly Num Floors = new Num(2, "DESIGN.md §1 (U15): a run is floor 1 then floor 2");
+        public static readonly Num Nights = new Num(6, "DESIGN.md §1 (U15): three nights a floor, two floors");
         public static readonly Num Quota1 = new Num(3000, "DESIGN.md §2: night 1 quota $3,000");
         public static readonly Num QuotaGrowth = new Num(1.5, "DESIGN.md §2: the house-rules curve, the quota x1.5 each night");
-        public static readonly Num QuotaStep = new Num(200, "DESIGN.md §2 (U13, the owner's call): the easy curve, the quota +$200 each night");
+        public static readonly Num QuotaStep = new Num(200, "DESIGN.md §2 (U15, the owner's call): the easy curve, the quota +$200 each night");
         public static readonly Num StartBank = new Num(1500, "DESIGN.md §2: start bank $1,500 (DECISIONS #40: $1,000 went broke on 42% of mid rotations)");
         public static readonly Num BankFloor = new Num(1000, "DESIGN.md §2 (DECISIONS #10): the bank carries over with a $1,000 floor");
         public static readonly Num ShortfallPerLife = new Num(2000, "DESIGN.md §2: one life per $2,000 short, rounded up (DECISIONS #55)");
@@ -34,10 +34,10 @@ namespace Vig.Sim.Data
         public static readonly Num MarkersCrash = new Num(1, "DESIGN.md §11: a Crash cash-out +1 marker, as Red Line");
         public static readonly Num PotSeed = new Num(5000, "DESIGN.md §12: the Bandit's progressive starts at $5,000 each floor");
         public static readonly Num PotShare = new Num(0.02, "DESIGN.md §12: 2% of every Bandit pull feeds the progressive");
-        public static readonly Num ShopSize = new Num(4, "DESIGN.md §5 (U15): the computer shows 4 charms a night");
-        public static readonly Num RerollCost = new Num(1, "DESIGN.md §5 (U15): a new catalogue costs 1 marker");
-        public static readonly Num RideMax = new Num(3, "DESIGN.md §12 (U16): let it ride up to 3 times on one win");
-        public static readonly Num RideS = new Num(8, "DESIGN.md §12 (U16): 8 s to decide to let a win ride");
+        public static readonly Num ShopSize = new Num(4, "DESIGN.md §5 (U17): the computer shows 4 charms a night");
+        public static readonly Num RerollCost = new Num(1, "DESIGN.md §5 (U17): a new catalogue costs 1 marker");
+        public static readonly Num RideMax = new Num(3, "DESIGN.md §12 (U18): let it ride up to 3 times on one win");
+        public static readonly Num RideS = new Num(8, "DESIGN.md §12 (U18): 8 s to decide to let a win ride");
 
         public static readonly Num[] All =
         {

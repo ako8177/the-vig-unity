@@ -40,6 +40,8 @@ namespace Vig.Client
         Quaternion camRot;
         int lastRev = -1;
         bool paused;
+        /// <summary>wins in a row, any table (the streak banners)</summary>
+        int streak;
 
         /// <summary>Build everything and start a run (also called by the screenshot tool, in edit mode).</summary>
         public void Boot(bool live)
@@ -423,6 +425,11 @@ namespace Vig.Client
                     else if (o.Crashed == true) Sfx.Play("boom", at);
                     else if (net < 0) Sfx.Play("lose", at, 0.7f);
                     if (net <= -Feel.BigWin) Sfx.Play("groan", at, 0.6f);
+                    // a run of wins gets the room's attention
+                    streak = net > 0 ? streak + 1 : net < 0 ? 0 : streak;
+                    if (net > 0 && streak >= 3 && net < Feel.BigWin) hud.Banner(streak >= 6 ? $"ON FIRE: {streak} IN A ROW" : $"ON A ROLL: {streak} IN A ROW", Look.Gold, 1.4f);
+                    // the Bandit's near miss, only when it really was one: two sevens on a line and the third not
+                    if (o.Table == "bandit" && o.Reels != null && !o.Win && NearMiss(o.Reels)) { hud.Toast(Ui.Col("SO CLOSE: TWO SEVENS ON A LINE", Look.Gold)); Sfx.Play("groan", at, 0.35f, 1.3f); }
                     break;
                 }
                 case "ride":
@@ -490,6 +497,16 @@ namespace Vig.Client
             }
         }
 
+        static bool NearMiss(List<int> g)
+        {
+            foreach (var line in Vig.Sim.Tables.Bandit.Lines)
+            {
+                int sevens = line.Count(i => g[i] == Vig.Sim.Tables.Bandit.Seven);
+                if (sevens == 2) return true;
+            }
+            return false;
+        }
+
         /// <summary>At 0:00 the lights drop everywhere but the Collector's table.</summary>
         void SetDim(bool on)
         {
@@ -548,6 +565,7 @@ namespace Vig.Client
                 lastRev = G.Rev;
             }
             hud.Refresh(G, Me);
+            if (room != null) foreach (var t in room.PotTexts) if (t) t.text = Ui.Money(G.State.Pot);
         }
 
         /// <summary>

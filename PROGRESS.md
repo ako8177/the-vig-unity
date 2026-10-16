@@ -74,3 +74,38 @@ PixelLab spend: 0.
   now have people.
 
 PixelLab spend: 0.
+
+## 2026-10-16: the big pass (U15-U25)
+
+**Done**
+
+- **Playable by mouse at every table** (U19): sit and the cursor comes free; the bar shows the odds card,
+  chips (+ to your bet), CLEAR / MAX, the table's moves as buttons, roulette's betting layout, Crash's
+  launch / auto / live cash-out, Let It Ride after wins, and at the Collector's table pay / challenge,
+  the levers, the trace, the wheel, the next night.
+- **Real dice** (U20) at Hi-Lo, Dead Man's Hand and Craps: PhysX throws from your side, landing on the
+  sim's faces, their clicks timed to the impacts.
+- **Floor 2** (U15, U23): nights 4-6, the Gold Room / Mirror Room / Furnace look, stakes doubled, and four
+  new games in 3D: Roulette (the wheel turning, the ball running and dropping into its pocket), Craps
+  (a point puck, every roll thrown), Peg Drop (the ball down 8 rows into its slot), Crash (a monitor
+  drawing the climb, gold then red past 5x). Floor 2's Circuit: 12 levers, 4 live.
+- **The easy curve** (U15): +$200 a night by default; house rules (x1.5) on the title screen.
+- **Ten new charms** (U16) and the **nightly catalogue** at the house computer with a paid reroll (U17).
+- **Let It Ride** (U18) and **the progressive** on the Bandit, glowing on the carousel (U25).
+- **The house** (U22): living room, kitchen, the desk and computer, the family, the yard, the mailbox
+  (flag up when the post comes), the car; the catalogue UI. A **title screen** with the run's options
+  (curve, start floor, start at home); unlocked charms are kept between runs.
+- **Sound** (U21): all synthesized: table sounds, escalating wins, coins, the crowd, the bell, the shock,
+  Crash's rocket and blast, a room murmur and a lounge loop.
+- **Hooks** (U24): streak banners, honest near misses, the bank rolling up and down.
+- **Checks**: 242 green (golden traces regenerated from C# per U11, a fuzz through all ten games on both
+  floors, floor-aware data checks); the Windows build runs its self-test clean.
+- **IDEAS.md**: what makes gambling grab people and how The Vig uses each hook honestly, plus 22 next ideas.
+
+**Not yet**
+
+- Pace bots for the new curve and floor 2 (DESIGN.md §8's measurements are floor 1's, ×1.5 curve).
+- Floor 2's crowd is floor 1's people at the new tables; the Collector is the same figure; dealers don't
+  yet handle the new games' pieces.
+- The house's furniture is plain blocks; the family is the crowd's kit.
+- Settings and pause screens; a results screen after a run.

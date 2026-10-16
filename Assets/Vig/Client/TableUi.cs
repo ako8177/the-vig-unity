@@ -1,4 +1,4 @@
-// The seated UI (U17): when you sit, the cursor comes free and the table's controls come up across the
+// The seated UI (U19): when you sit, the cursor comes free and the table's controls come up across the
 // bottom of the screen. The odds card on the left (tier, win chance, payout, what losing costs: always
 // printed, CLAUDE.md), a chip rack and your bet in the middle, the table's own moves on the right, a
 // "let it ride" offer after every win, Crash's live cash-out, roulette's betting layout. At the
@@ -65,7 +65,7 @@ namespace Vig.Client
             statusText = Ui.Text("status", bar, "", 20, new Color(0.8f, 0.75f, 0.85f), TextAlignmentOptions.TopLeft, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-760, -54), new Vector2(-280, -14), true);
             collText = Ui.Text("collector", bar, "", 26, Color.white, TextAlignmentOptions.TopLeft, new Vector2(0, 0), new Vector2(0.5f, 1), new Vector2(36, 18), new Vector2(-20, -18));
 
-            // let it ride: double or nothing on the win that just landed (U16)
+            // let it ride: double or nothing on the win that just landed (U18)
             ridePanel = Ui.Panel("ride", t, new Color(0.12f, 0.08f, 0.01f, 0.94f), new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(-420, 272), new Vector2(420, 408)).rectTransform;
             ridePanel.GetComponent<Image>().sprite = Ui.Round;
             ridePanel.GetComponent<Image>().type = Image.Type.Sliced;

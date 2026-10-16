@@ -25,6 +25,8 @@ namespace Vig.Client
         /// <summary>each game table's group (its frame: felt at Placement.H, the seat toward -Z)</summary>
         public readonly Dictionary<string, Transform> Tables = new Dictionary<string, Transform>();
         public readonly List<Light> RoomLights = new List<Light>();
+        /// <summary>the progressive's figures on the carousel (floor 1)</summary>
+        public readonly List<TMPro.TextMeshPro> PotTexts = new List<TMPro.TextMeshPro>();
         int shadowed;
 
         /// <summary>which floor this is (1: the slice's; 2: the Gold Room, the Mirror Room, the Furnace)</summary>
@@ -541,6 +543,15 @@ namespace Vig.Client
                     Part("jackpot", MeshKit.Lathe(new[] { P(0.72f, 2.6f), P(0.72f, 3.2f) }, 48, false, false), Look.Screen("jackpot", new Color(1f, 0.6f, 0.15f) * 2.2f), Vector3.zero, null, g, false);
                     Part("jackpot ring", MeshKit.Tube(MeshKit.Circle(0.74f, 48, 0), 0.015f, 6, true), Look.Neon(Look.Gold, 6f), new Vector3(0, 2.58f, 0), null, g, false);
                     Part("jackpot ring", MeshKit.Tube(MeshKit.Circle(0.74f, 48, 0), 0.015f, 6, true), Look.Neon(Look.Gold, 6f), new Vector3(0, 3.22f, 0), null, g, false);
+                    // the progressive (DESIGN.md §12): its figure on four sides of the tower, kept current by Play
+                    for (int k = 0; k < 4; k++)
+                    {
+                        var face = Group("pot face", Vector3.zero, k * 90 + 180, g);
+                        Neon.Text(face, "PROGRESSIVE", Look.Gold, new Vector3(0, 3.08f, -0.75f), 0.09f, 0, 2f);
+                        var t = Neon.Text(face, "$5,000", Color.white, new Vector3(0, 2.84f, -0.75f), 0.2f, 0, 2.6f);
+                        t.name = "pot text";
+                        PotTexts.Add(t);
+                    }
                     for (int i = 0; i < 8; i++)
                     {
                         float a = i / 8f * 360f;

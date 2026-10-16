@@ -1,4 +1,4 @@
-// Real dice (U18): every throw is simulated in PhysX in a lab far below the room (a felt and four walls the
+// Real dice (U20): every throw is simulated in PhysX in a lab far below the room (a felt and four walls the
 // size of the table, the dice as rigid bodies), recorded frame by frame, then each die's mesh is turned by a
 // die symmetry so the face the sim drew is the one that ends up on top. What you see is a real roll; what
 // it lands on is still the sim's. The room itself has no physics, so the lab is the only thing simulated.

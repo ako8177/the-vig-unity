@@ -198,7 +198,7 @@ namespace Vig.Sim.Systems
             // Hot Hand counts wins in a row at one table (DESIGN.md §12)
             if (o.Win) { if (p.HotTable == id) p.HotRun++; else { p.HotTable = id; p.HotRun = 1; } }
             else if (o.Ret < o.Bet) { p.HotTable = id; p.HotRun = 0; }
-            // a win's profit is offered to let ride, double or nothing (U16)
+            // a win's profit is offered to let ride, double or nothing (U18)
             t.Ride = o.Win && o.Ret > o.Bet ? new Ride { Player = o.Player, Amount = o.Ret - o.Bet, Until = g.Tick + Rules.Ticks(Economy.RideS.V), Count = 0 } : null;
             if (o.Win)
             {
@@ -242,7 +242,7 @@ namespace Vig.Sim.Systems
         public override string Id => "tables";
         public override string[] Handles => new[] { "sit", "stand", "bet", "call", "spin", "ride" };
 
-        /// <summary>Let it ride: the last win's profit, double or nothing, at even odds (U16).</summary>
+        /// <summary>Let it ride: the last win's profit, double or nothing, at even odds (U18).</summary>
         static void LetItRide(Game g, PlayerState p, string table)
         {
             var s = g.State;
@@ -527,7 +527,7 @@ namespace Vig.Sim.Systems
 
         public static List<string> PendingItems(Game g) => g.State.Post.Orders.Concat(g.State.Post.Box).Select(o => o.Item).ToList();
 
-        /// <summary>Tonight's catalogue: ShopSize charms from the pool (U15).</summary>
+        /// <summary>Tonight's catalogue: ShopSize charms from the pool (U17).</summary>
         public static void DrawShop(Game g)
         {
             var s = g.State;

@@ -28,7 +28,7 @@ namespace Vig.Sim
         public bool Home;
         /// <summary>charms unlocked by killing Collectors in earlier runs (meta; DECISIONS #81)</summary>
         public IEnumerable<string> Unlocked = new string[0];
-        /// <summary>the quota curve: easy (+$200 a night, the default: U13) or house (x1.5)</summary>
+        /// <summary>the quota curve: easy (+$200 a night, the default: U15) or house (x1.5)</summary>
         public string Curve = "easy";
         /// <summary>start on this floor (2: night 4, for testing the deeper games)</summary>
         public int StartFloor = 1;

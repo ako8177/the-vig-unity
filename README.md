@@ -16,17 +16,13 @@ Open in Unity 6 (6000.6.5f1), open `Assets/Scenes/Floor1.unity`, press Play.
 | | |
 |---|---|
 | WASD, Shift, mouse | walk, run, look (click to capture the mouse, Esc to free it) |
-| E | sit at a table / call the night at the Collector's table |
-| `[` `]` | change your bet |
-| H / L | Hi-Lo: call hi or lo |
-| R / B | Red Line: red or black |
-| Space | the Bandit, the Wheel, Dead Man's Hand; deal at Twenty-One; spin the Collector's wheel |
-| H S D P | Twenty-One: hit, stand, double, split |
-| X | stand up |
+| E | sit at a table, use the computer / mailbox / car at home, call the night at the Collector's table |
+| Mouse, seated | chips build your bet; the table's buttons play it; LET IT RIDE after a win |
+| `[` `]`, X | the bet down / up, stand up (the table's own keys still work too) |
 | 1-4 | order a drink at the bar |
-| P / G | at midnight: pay, or challenge him |
-| 1-0 (Shift) | the Circuit: pull a lever (trace a wire) |
-| Enter | next night / new run |
+
+The title screen sets the run: quotas (easy +$200 a night, or house rules x1.5), the floor to start
+on, and whether to start at the house.
 
 ## Develop
 

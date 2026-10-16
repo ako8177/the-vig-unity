@@ -64,7 +64,7 @@ namespace Vig.Client
         public void Show(bool on) => canvas.enabled = on;
     }
 
-    /// <summary>The computer at the house: tonight's catalogue (DESIGN.md §5, U15).</summary>
+    /// <summary>The computer at the house: tonight's catalogue (DESIGN.md §5, U17).</summary>
     public sealed class ShopUi
     {
         readonly Canvas canvas;

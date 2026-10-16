@@ -54,7 +54,7 @@ namespace Vig.Client
 
         protected override void Animate(Game g, TableState t, Outcome o, bool live, float p, float since, float nowS)
         {
-            // real dice (U18): the throw is physics, the faces are the sim's
+            // real dice (U20): the throw is physics, the faces are the sim's
             if (o?.Dice != null && o.Dice.Count >= dice.Length)
             {
                 int key = (live ? t.Rounds : t.Rounds - 1) * 97 + o.Dice[0] * 7 + (two ? o.Dice[1] : 0) + (two ? 5000 : 0);

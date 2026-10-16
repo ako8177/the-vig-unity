@@ -307,7 +307,7 @@ namespace Vig.EditorTools
                 },
             });
 
-            // ---- the house (U20)
+            // ---- the house (U22)
             var hs = Home.Spawn;
             list.Add(new Shot
             {

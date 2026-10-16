@@ -1,4 +1,4 @@
-// Every sound, synthesized at load (U19): no audio files. The tables' own noises (dice clicking on the felt
+// Every sound, synthesized at load (U21): no audio files. The tables' own noises (dice clicking on the felt
 // where the physics says they hit, cards flicked off the shoe, chips, reels, the wheel's flapper, the
 // roulette ball), the wins that grow with their size (a chime, a fanfare, a cascade of coins and the room
 // cheering), the losses (a soft thud), the night's beats (the 0:00 bell, the shock, the rocket and its

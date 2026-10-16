@@ -82,7 +82,7 @@ namespace Vig.Sim.Data
             new CharmDef { Id = "insulated", Name = "Insulated Kit", Price = 4, Systems = new[] { "circuit", "table" }, Unlock = 0,
                 Text = new[] { "THE CIRCUIT: TRACE 2 WIRES FREE", "RUBBER SOLES: STICKY FLOOR CAN'T SLOW YOU" },
                 Derivation = "DESIGN.md §5 (DECISIONS #81): unlocked by killing the first Collector at the Circuit; two free traces a duel (you win 76%, not 50%); the team mark Sticky Floor doesn't slow its wearer; price 4" },
-            // ---- the second set (DESIGN.md §12, U14)
+            // ---- the second set (DESIGN.md §12, U16)
             new CharmDef { Id = "hothand", Name = "Hot Hand", Price = 4, Systems = new[] { "table" },
                 Text = new[] { "EACH WIN IN A ROW AT A TABLE:", "+10% ON ITS PAYOUTS (UP TO +50%)" },
                 Derivation = "DESIGN.md §12: +10% a win in a row at the same table, capped at +50%; a loss or a new table resets; price 4" },
@@ -103,7 +103,7 @@ namespace Vig.Sim.Data
                 Derivation = "DESIGN.md §12: drinks cost $0 and their edge runs 2x its buzz; price 2" },
             new CharmDef { Id = "seven", Name = "Lucky Seven", Price = 3, Systems = new[] { "table" },
                 Text = new[] { "THE BANDIT: 7 7 7 PAYS 25x", "(NOT 10x)" },
-                Derivation = "DESIGN.md §12: a 7-line pays 25x; the Bandit's RTP goes 0.950 → about 1.03; price 3" },
+                Derivation = "DESIGN.md §12: a 7-line pays 25x; the Bandit's RTP goes 0.950 → 1.070 (4^9 grids enumerated); price 3" },
             new CharmDef { Id = "foot", Name = "Rabbit's Foot", Price = 4, Systems = new[] { "table", "lives" },
                 Text = new[] { "ONCE A NIGHT: A LOSING ROLL AT", "HI-LO OR DEAD MAN'S IS ROLLED AGAIN" },
                 Derivation = "DESIGN.md §12: the first losing Hi-Lo or Dead Man's roll each night is rerolled and the reroll stands; price 4" },

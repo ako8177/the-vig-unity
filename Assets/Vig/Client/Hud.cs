@@ -14,6 +14,7 @@ namespace Vig.Client
         readonly TextMeshProUGUI clock, money, status, prompt, toasts, banner, help, charms;
         readonly List<(string text, float until)> lines = new List<(string, float)>();
         float bannerUntil;
+        float shownBank = -1;
         public readonly Canvas Canvas;
 
         public Hud()
@@ -65,7 +66,12 @@ namespace Vig.Client
             int secs = s.Clock / State.TicksPerS;
             clock.text = s.Phase == Phase.Floor ? $"{secs / 60}:{secs % 60:00}" : s.Phase == Phase.Midnight || s.Phase == Phase.Choice || s.Phase == Phase.Circuit || s.Phase == Phase.Wheel ? Ui.Col("0:00", Look.Coll) : "";
             Color bc = s.Bank >= s.Quota ? Look.LowHi : Look.Brass;
-            money.text = $"{Ui.Col(Ui.Money(s.Bank), bc)} {Ui.Col("/ " + Ui.Money(s.Quota), Look.Smoke)}    {Ui.Col("NIGHT " + s.Night, Look.Bone)}  {Ui.Col("FLOOR " + s.Floor, Look.Gold)}";
+            // the bank rolls to its figure: wins count up, losses drain
+            if (shownBank < 0 || Mathf.Abs(shownBank - s.Bank) > 50000) shownBank = s.Bank;
+            shownBank = Mathf.MoveTowards(shownBank, s.Bank, Mathf.Max(40, Mathf.Abs(s.Bank - shownBank) * 6) * Mathf.Max(Time.deltaTime, 1 / 60f));
+            int shown = Mathf.RoundToInt(shownBank);
+            if (shown != s.Bank) bc = shown < s.Bank ? Look.LowHi * 1.2f : Look.Blood * 1.3f;
+            money.text = $"{Ui.Col(Ui.Money(shown), bc)} {Ui.Col("/ " + Ui.Money(s.Quota), Look.Smoke)}    {Ui.Col("NIGHT " + s.Night, Look.Bone)}  {Ui.Col("FLOOR " + s.Floor, Look.Gold)}";
             charms.text = p.Charms.Count == 0 ? "" : string.Join("  ·  ", p.Charms.Select(c => Charms.ById(c)?.Name.ToUpperInvariant()));
             string hearts = string.Concat(Enumerable.Range(0, Mathf.Max(p.Lives, 0)).Select(_ => "♥"));
             var marks = s.Marks.Where(m => m.Player == -1 || m.Player == me).Select(m => Ui.Col(Marks.ById(m.Id).Name.ToUpperInvariant() + (m.Stacks > 1 ? " x" + m.Stacks : "") + $" {Mathf.CeilToInt(m.Left / 60f)}s", Look.Blood));

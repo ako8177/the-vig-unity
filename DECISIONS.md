@@ -78,3 +78,47 @@ Every decision with its reason. The TS game's log (#1-#87) is frozen in `docs/DE
   screen lying on the felt, which framed only his chair's back. The client keeps the sim's eye but looks
   0.22 m higher and 0.4 m further (`Play.CollectorView`, also the shot tool's 13-15): the screen sits in
   the lower half of the view, readable, and he fills the upper. Presentation only; the sim is unchanged.
+- **U15 2026-10-16: The easy curve, and a run of two floors** (owner: "change the deadlines to raise
+  only by a couple hundred so i can get some easy playthroughs to test new games"; "fine tune the first
+  and second floors"). The quota is the owner's lever (CLAUDE.md, "ask before"): it now rises **+$200 a
+  night** from $3,000 by default, and the old ×1.5 stays as "house rules" on the title screen
+  (DESIGN.md §2). A run is floor 1 (nights 1-3) then floor 2 (nights 4-6); the ending comes after night 6.
+  The title screen can start on floor 2 (night 4) to test its games straight away.
+- **U16 2026-10-16: Ten new charms** (owner: "introduce new charms"): Hot Hand, Red Rover, Card Counter,
+  Snake Charmer (locked: kill the second Collector), Compound Interest, Comp Card, Lucky Seven, Rabbit's
+  Foot, Parachute, Croupier's Thumb (DESIGN.md §12). Our names and numbers; CloverPit stays the
+  inspiration for items that bend the odds, not their items (TS PLAN).
+- **U17 2026-10-16: The computer sells a nightly catalogue of 4**, redrawn each time you come home; a new
+  catalogue costs 1 marker. 15 charms made the full list a menu; four make it a draft.
+- **U18 2026-10-16: Let it ride.** After a winning round its profit can ride, double or nothing at 50%,
+  up to 3 times within 8 s. EV exactly 1.0, so no table's RTP or tier moves; odds printed on the offer.
+  **Derivative flag (CLAUDE.md):** a gamble-your-winnings button is a fixture of UK fruit machines (the
+  "gamble" feature), a genre convention rather than one game's mechanic; ours is a fair coin, printed.
+- **U19 2026-10-16: The seated UI** (owner: "setting bets is confusing i still want an interactable ui when
+  you sit to play"). Sitting frees the cursor and brings up a bar: the odds card (always printed), chips
+  that add to your bet, CLEAR / MAX, each table's moves as buttons, Crash's live cash-out and auto,
+  roulette's layout, the ride offer; the Collector's choice, levers and wheel as buttons too. The keys
+  still work. Seated, the camera looks down past the table's screen to the felt.
+- **U20 2026-10-16: Real dice** (owner: "real die rolling"). Each throw is simulated in PhysX in a lab under
+  the room and the dice are turned by a cube symmetry so the sim's faces come up: a real roll, the sim's
+  result (Client/DiceLab.cs). Used by Hi-Lo, Dead Man's Hand and Craps, thrown from your side. The click
+  of each die is timed to its physical impacts. `Physics.simulationMode` is Script (the room has no
+  other physics).
+- **U21 2026-10-16: Every sound is synthesized at load** (Client/Sfx.cs): no audio files to license or
+  ship. Wins escalate (chime, fanfare, coins and the crowd), the 0:00 bell, the shock, the rocket and
+  its crash, a murmuring room and a lounge loop that duck at midnight.
+- **U22 2026-10-16: The house is built** (owner: "get the house built"), from the same data the sim
+  collides with: living room, kitchen, the desk and its computer (the catalogue), the family, the yard,
+  the mailbox (its flag goes up when the post comes), the car. A run starts there by default (title
+  screen option).
+- **U23 2026-10-16: Floor 2's games** (DESIGN.md §11): Roulette and Craps (low), Peg Drop (mid), Crash
+  (high), with Hi-Lo and Red Line back at double stakes, each with exact odds checked by SimCheck. Floor 2
+  shares floor 1's shell; its look is its own (the Gold Room, the Mirror Room, the Furnace). The Bane's
+  extra lever is now "+1 on the floor's count" (it was a flat 4, a no-op on floor 2's 4-of-12).
+  **Derivative flags:** Crash and Peg Drop are genres from online casinos (Plinko's board, the crash
+  multiplier), not one game; ours carry our own numbers, and Crash's life-past-5x is ours.
+- **U24 2026-10-16: Near misses are honest.** The Bandit says "SO CLOSE" only when two sevens really
+  landed on a line, and celebrations scale with net winnings (a 0.4x return is never dressed as a win).
+  Real machines fake both; the not-list's "no odds hidden" extends to "no feelings faked".
+- **U25 2026-10-16: The Bandit's progressive**: 2% of every pull feeds a pot ($5,000 a floor to start),
+  the whole grid alike takes it; it glows on the carousel's tower. RTP effect under 0.001 (DESIGN.md §12).

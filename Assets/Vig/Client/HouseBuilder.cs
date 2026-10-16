@@ -1,4 +1,4 @@
-// The house (DESIGN.md §5; TS DECISIONS #79; U20): where a run starts and where you come back after every
+// The house (DESIGN.md §5; TS DECISIONS #79; U22): where a run starts and where you come back after every
 // Collector, built from the same data the sim collides against (Vig.Sim.Data.Home): the living room with
 // the couch and the television, the kitchen corner, the desk with the computer you order charms on, the
 // front door; outside, the yard and its path, the hedges, the mailbox by the curb (its flag goes up when

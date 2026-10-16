@@ -10,7 +10,8 @@ numbers. Change a number → write the new derivation here first.
 
 - Tick 1/60 s. A night is **360 s**. Money in whole dollars. Lives are integers per player:
   **3 each** at the start of a run. The slice is **three nights** on floor 1; surviving the
-  third Collector wins it.
+  third Collector wins it. **Since U15 (2026-10-16) a run is two floors: three nights on floor 1,
+  then the stairs down to floor 2 (§11) for nights 4-6; surviving the sixth Collector wins it.**
 - **RTP** (return to player) is the expected payout per dollar bet. **The rule: RTP rises with
   the tier, and the price of losing rises from money → marks → lives.** Low < 1.0; mid > 1.0
   with marks; high ≫ 1.0 with death.
@@ -21,6 +22,16 @@ numbers. Change a number → write the new derivation here first.
   the Back Room ≈ 3 s. The pace bots sprint every walk, so the night's arithmetic assumes it.
 
 ## 2. The quota
+
+**The easy curve (U15, the owner's call, 2026-10-16):** "change the deadlines to raise only by a
+couple hundred so i can get some easy playthroughs to test new games." The quota now rises **+$200
+a night** from night 1's $3,000: $3,000, $3,200, $3,400 on floor 1, $3,600, $3,800, $4,000 on floor 2
+(a Boon's -20% still applies, to the nearest $10). It is the default; the curve below (×1.5) stays in
+the game as **house rules** on the title screen. Night 1 is unchanged, so the floor-1 lesson holds
+(safe-only fails night 1: it still needs +$1,500 from a $1,500 bank in 360 s); what goes is the
+escalation that made nights 2-3 force blood. That's deliberate while the owner tests the new games;
+when the run is balanced again, the curve between the two is the owner's to pick (CLAUDE.md, "ask
+before").
 
 Night 1 **$3,000**, then ×1.5: $4,500, $6,750, $10,125… Start bank **$1,500** (DECISIONS #40;
 it was $1,000, and the pace bots went broke before the night's drift could show). A lost
@@ -316,3 +327,81 @@ odds printed on the felt stay the base odds: an edge is the player's, like a mar
    glance?
 
 If any answer is no, fix the model here before Milestone 3.
+
+
+## 11. Floor 2 (U15, U23)
+
+**The structure.** Nights 4-6 are on floor 2. It is floor 1's shell (the same three rooms, bar, cage
+and the Collector's table) dressed new: THE GOLD ROOM (black and gold art deco), THE MIRROR ROOM,
+THE FURNACE (brick and embers). Every stake is **doubled** (`Tables.FloorStakes[2] = 2`), old games and
+new. The Bandit's progressive starts over at $5,000 on the new floor. The tier rule holds on the floor:
+
+| Table | Tier | Bet (×2 on floor 2) | Pays | RTP | Losing costs |
+|---|---|---|---|---|---|
+| Roulette | low | $50-$250, std $100 | even 2x, dozen 3x, number 36x | 36/37 = **0.973** | the bet |
+| Craps (pass line) | low | $50-$250, std $100 | 1:1 | 244/495 × 2 = **0.986** | the bet |
+| Peg Drop | mid | $100-$500, std $200 | 20x / 4x / 1.6x / 0.7x / 0.4x | 300/256 = **1.172** | the center slot: a mark |
+| Hi-Lo (again) | mid | ×2 | 2.4x | 1.20 | the bet + a mark |
+| Crash | high | $250-$1,250, std $500 | cash out at any x | **1.246** at 3x | the bet; a crash past 5x costs a life |
+| Red Line (again) | high | ×2 | 2.5x | 1.25 | 3 losses in a row cost a life |
+
+**Roulette.** One zero, 37 pockets. Every bet pays 36/37 of fair odds, so every bet returns $0.973:
+the classic slow loss, and the game where the choice is only how wild you want it (18 of 37 at 2x,
+or 1 of 37 at 36x). Croupier's Thumb (§12) makes a single number pay 45x = 1.216.
+
+**Craps.** The pass line only. Come-out: 7 or 11 wins (8/36), 2, 3, 12 lose (4/36), anything else is
+the point; then roll until the point (win) or a 7 (lose). P(win) = 8/36 + Σ over points p(point) ×
+p(point)/(p(point)+p(7)) = 244/495 = 0.49293 → RTP 0.9859. The stake rides every roll; at 0:00 a bet on
+a point is handed back (the table closes, nobody loses to the clock). You throw the dice yourself.
+
+**Peg Drop.** 8 rows of pegs; the ball goes left or right at each (the sim's 8 coin flips), so slot k
+is reached with C(8,k)/256: 1, 8, 28, 56, 70, 56, 28, 8, 1. Payouts 20x, 4x, 1.6x, 0.7x, 0.4x (symmetric):
+RTP = (2×20 + 16×4 + 56×1.6 + 112×0.7 + 70×0.4)/256 = 300/256 = 1.172. Ahead on 74 of 256 (29%): a mid
+table that pays like a lottery at the edges. Its price is mid's: landing dead center (70/256) marks you
+(Pegged: -5% on your Peg Drop payouts a stack, 30 s, stacking to 10, as Hi-Lo's).
+
+**Crash.** The multiplier climbs as e^(0.28 s) (2x at 2.5 s, 5x at 5.7 s, 10x at 8.2 s) and crashes at a
+point drawn so that P(it reaches x) = x^-0.8 (from one draw u: crash = u^(-1/0.8), capped at 1000x). Cash
+out at x and you're paid x times the stake. EV at a target x is x × x^-0.8 = x^0.2: **it rises the longer
+you ride** (2x 1.15, 3x 1.25, 5x 1.38, 10x 1.58), which is what makes greed the right call on average
+and the wrong one in the moment, so the price has to bite: **a crash past 5x costs a life**. Riding for
+10x loses a life on 5^-0.8 - 10^-0.8 = 11.8% of rounds. The printed RTP is the 3x line (1.246, the
+table's "standard play"), and the screen prints the win chance at the auto cash-out you set. A win pays
++1 marker (as Red Line). This is the game where the owner's "make it grabbing" lives: a real-time
+decision with the odds printed and the dread rising on screen.
+
+**The Circuit, floor 2.** 12 levers, 4 live, a dead lever pays $600 and a marker. Measured over 200k
+random duels: you win **45%** (63% with the Insulated Kit pulling known-dead levers first; 44% with the
+Bane's extra live lever). The Bane is now "one more live lever than the floor's" (floor 1 unchanged: 4 of
+10, 42%).
+
+## 12. The second set of charms, the catalogue, letting it ride, the progressive (U16-U18, U25)
+
+**Charms** (markers, from the house computer). Each touches at least one system (DECISIONS #85):
+
+| Charm | Price | Does | Derived |
+|---|---|---|---|
+| Hot Hand | 4 | +10% payouts per win in a row at the same table, to +50% | at Hi-Lo a 3-streak pays 2.4 × 1.3 = 3.12x; the reset is the leash |
+| Red Rover | 3 | Red Line's life-risking call (two losses in a row) pays 4x not 2.5x | that call's EV goes 1.25 → 2.0, at the price of the life: the danger call becomes the tempting one |
+| Card Counter | 3 | naturals pay 2:1; the screen shows the count | naturals are ~4.75% of hands: +0.024 RTP, 0.992 → ~1.016 |
+| Snake Charmer | 5 | Dead Man's snake eyes wins 6x instead of a life (locked: kill the 2nd Collector) | 10/36 × 6 = RTP 1.667 and no death: the run-defining unlock |
+| Compound Interest | 4 | +10% of the bank at each new night, max $600 | a $3,000 carry is +$300 a night: the money-printer engine |
+| Comp Card | 2 | drinks free; their edge lasts twice as long | a Martini's +4% runs 120 s for $0 |
+| Lucky Seven | 3 | the Bandit's 7-line pays 25x not 10x | 8 lines × (1/10)^3 = 0.8% a pull × 15 extra = +0.12: the 4^9 grids enumerate to 1.070 |
+| Rabbit's Foot | 4 | once a night, a losing Hi-Lo or Dead Man's roll is rolled again | worth one coin flip on the night's first loss |
+| Parachute | 4 | a crash returns half the stake and never costs a life | Crash at 10x without the life risk: the greed charm |
+| Croupier's Thumb | 3 | roulette's single number pays 45x | 45/37 = 1.216 on numbers: a low table turned into a long shot |
+
+**The catalogue (U17).** The computer shows **4 charms a night**, drawn from the pool (locked charms
+excluded), redrawn when you come home; **a new catalogue costs 1 marker**. With 15 charms, which ones you
+see is part of the run (the roguelike's draft), and the reroll is the first gamble of every night.
+
+**Let it ride (U18).** After any round that comes out ahead, its **profit** can ride: double or nothing
+on a fair coin (50%, 2x, or lose the profit), up to 3 times, within 8 s. EV exactly 1.0: it changes no
+table's RTP and every tier keeps its place; what it adds is the choice to turn a small win into a story.
+The odds are printed on the offer.
+
+**The progressive (U25).** Every Bandit pull adds 2% of its stake to a pot that starts at $5,000 per floor;
+the whole grid alike (about 1 in 52,000 pulls) pays its 50x plus the pot. A run sees a few hundred pulls,
+so the pot grows by a few hundred dollars and is won almost never: it is there to be looked at, glowing on
+the carousel's tower, and it changes the Bandit's RTP by under 0.001.

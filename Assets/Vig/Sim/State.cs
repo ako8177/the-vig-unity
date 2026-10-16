@@ -111,7 +111,7 @@ namespace Vig.Sim
         public int Player;
     }
 
-    /// <summary>Let it ride (U16): a win's profit, on offer for double or nothing until the tick `Until`.</summary>
+    /// <summary>Let it ride (U18): a win's profit, on offer for double or nothing until the tick `Until`.</summary>
     public sealed class Ride
     {
         public int Player;
@@ -278,11 +278,11 @@ namespace Vig.Sim
         public NightSummary Summary;
         public Done Result;
         public RunStats Stats = new RunStats();
-        /// <summary>easy (+$200 a night) | house (x1.5 a night): U13</summary>
+        /// <summary>easy (+$200 a night) | house (x1.5 a night): U15</summary>
         public string Curve;
         /// <summary>the Bandit's progressive jackpot</summary>
         public int Pot;
-        /// <summary>tonight's catalogue on the computer at home (U15)</summary>
+        /// <summary>tonight's catalogue on the computer at home (U17)</summary>
         public List<string> Shop = new List<string>();
 
         public const int TicksPerS = 60;
