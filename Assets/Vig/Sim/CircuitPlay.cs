@@ -14,8 +14,8 @@ namespace Vig.Sim
         public static CircuitState New(Game g)
         {
             var r = Circuit.For(g.State.Floor);
-            // the Bane: a fourth live lever (DESIGN.md §7)
-            int live = g.State.Mods.Overloads3 ? Wheels.BigOverloads : r.Live;
+            // the Bane: one more live lever than the floor's (DESIGN.md §7)
+            int live = g.State.Mods.Overloads3 ? r.Live + 1 : r.Live;
             var states = Enumerable.Range(0, r.Levers).Select(i => i < live).ToList();
             g.Rng.Shuffle(states);
             return new CircuitState

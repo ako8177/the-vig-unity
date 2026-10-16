@@ -80,7 +80,41 @@ namespace Vig.Sim.Data
                 HowText = "TWO DICE. DOUBLES OR 10+ WIN. 1-1 COSTS A LIFE.",
                 Derivation = "DESIGN.md §3: high tier, p 9/36 = 0.25 x 6 = RTP 1.50, +$500 a round; snake eyes (1/36) costs a life",
             },
+            // ---- floor 2 (DESIGN.md §11): its stakes are written at floor 1's scale; FloorStakes doubles them
+            new TableDef
+            {
+                Id = "roulette", Name = "Roulette", Sign = "ROULETTE", Tier = Data.Tier.Low, Loss = "coin", Bet = new BetLimits(50, 250, 50, 100), RoundS = 7, ResolveS = Feel.RouletteS,
+                WinP = 18 / 37.0, Pays = null, Rtp = 36 / 37.0, PaysText = "EVEN 2x, DOZEN 3x, NUMBER 36x", LossText = "THE BET",
+                HowText = "ONE ZERO. RED, BLACK, ODD, EVEN, LOW, HIGH, A DOZEN OR ONE NUMBER.",
+                Derivation = "DESIGN.md §11: low tier; 37 pockets, every bet pays 36/37 of fair → RTP 0.973 on all of them; even money wins 18 of 37",
+            },
+            new TableDef
+            {
+                Id = "craps", Name = "Craps", Sign = "CRAPS", Tier = Data.Tier.Low, Loss = "coin", Bet = new BetLimits(50, 250, 50, 100), RoundS = 9, ResolveS = Feel.CrapsS,
+                WinP = 244 / 495.0, Pays = 2, Rtp = 488 / 495.0, PaysText = "PASS LINE 1:1", LossText = "THE BET",
+                HowText = "COME OUT: 7 OR 11 WINS, 2 3 12 LOSE. ELSE HIT THE POINT AGAIN BEFORE A 7.",
+                Derivation = "DESIGN.md §11: low tier; the pass line wins 244 of 495 → x2 = RTP 0.986",
+            },
+            new TableDef
+            {
+                Id = "pegdrop", Name = "Peg Drop", Sign = "PEG DROP", Tier = Data.Tier.Mid, Loss = "mark", Bet = new BetLimits(100, 500, 100, 200), RoundS = 4, ResolveS = Feel.PegS,
+                WinP = 74 / 256.0, Pays = null, Rtp = 300 / 256.0, PaysText = "EDGES 20x, 4x, 1.6x, 0.7x, CENTER 0.4x", LossText = "THE CENTER SLOT: +1 MARK",
+                HowText = "DROP THE BALL. 8 ROWS OF PEGS, 9 SLOTS.",
+                Derivation = "DESIGN.md §11: mid tier; 8 rows, slot k has C(8,k)/256; 20/4/1.6/0.7/0.4 → 300/256 = RTP 1.172; ahead 74 of 256",
+            },
+            new TableDef
+            {
+                Id = "crash", Name = "Crash", Sign = "CRASH", Tier = Data.Tier.High, Loss = "skull", Bet = new BetLimits(250, 1250, 250, 500), RoundS = 7, ResolveS = 0.5,
+                WinP = 0.4152, Pays = null, Rtp = 1.2457, PaysText = "CASH OUT AT ANY x", LossText = "THE BET; A CRASH PAST 5x COSTS A LIFE",
+                HowText = "IT CLIMBS FROM 1x. CASH OUT BEFORE IT CRASHES.",
+                Derivation = "DESIGN.md §11: high tier; P(reach x) = x^-0.8, so cashing at 3x wins 41.5% for RTP 3^0.2 = 1.246, and it rises the longer you ride",
+            },
         };
+
+        /// <summary>The tables of each floor (DESIGN.md §11).</summary>
+        public static string[] OnFloor(int floor) => floor >= 2
+            ? new[] { "roulette", "craps", "pegdrop", "hilo", "crash", "redline" }
+            : new[] { "bandit", "twentyone", "hilo", "wheel", "redline", "deadman" };
 
         static readonly Dictionary<string, TableDef> byId = All.ToDictionary(t => t.Id);
         public static TableDef ById(string id) => id != null && byId.TryGetValue(id, out var t) ? t : null;
@@ -92,6 +126,7 @@ namespace Vig.Sim.Data
         public static readonly Dictionary<int, Num> FloorStakes = new Dictionary<int, Num>
         {
             { 1, new Num(1, "DESIGN.md §3 (DECISIONS #85): floor 1 plays the stakes as written") },
+            { 2, new Num(2, "DESIGN.md §11: floor 2 doubles every stake, old games and new") },
         };
 
         public static BetLimits LimitsOf(TableDef t, int floor = 1)

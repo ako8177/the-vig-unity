@@ -26,7 +26,9 @@ static class Program
     {
         string root = FindRoot();
         var only = args.FirstOrDefault();
+        if (only == "regen") { Regen(Path.Combine(root, "tools", "golden", "traces")); return 0; }
         if (only == null || only == "golden") Golden(Path.Combine(root, "tools", "golden", "traces"));
+        if (only == null || only == "fuzz") Fuzz();
         if (only == null || only == "replay") Replay();
         if (only == null || only == "data") DataChecks();
         if (only == null || only == "rules") RuleChecks();
@@ -138,6 +140,148 @@ static class Program
         }
     }
 
+    /// <summary>Rewrite each trace's expected lines from the C# sim, replaying its recorded commands (U11:
+    /// after a deliberate rule change). The commands stay; the lines become the C# sim's.</summary>
+    static void Regen(string dir)
+    {
+        foreach (var file in Directory.GetFiles(dir, "*.json.gz").OrderBy(f => f))
+        {
+            JsonDocument doc;
+            using (var gz = new GZipStream(File.OpenRead(file), CompressionMode.Decompress)) doc = JsonDocument.Parse(gz);
+            var r = doc.RootElement;
+            var cfg = r.GetProperty("config");
+            var opts = new GameOpts
+            {
+                Seed = cfg.GetProperty("seed").GetUInt32(),
+                Players = cfg.GetProperty("players").GetInt32(),
+                Home = cfg.GetProperty("home").GetBoolean(),
+                Upgrades = cfg.GetProperty("upgrades").EnumerateArray().Select(x => x.GetString()).ToList(),
+                Unlocked = cfg.GetProperty("unlocked").EnumerateArray().Select(x => x.GetString()).ToList(),
+            };
+            var actions = r.GetProperty("actions").EnumerateArray().ToList();
+            int ticks = r.GetProperty("ticks").GetInt32();
+            var g = new Game(opts);
+            var lines = new List<string>();
+            int ai = 0;
+            while (g.Tick < ticks)
+            {
+                bool acted = false;
+                while (ai < actions.Count && actions[ai].GetProperty("tick").GetInt32() == g.Tick)
+                {
+                    var a = actions[ai++];
+                    acted = true;
+                    int pid = a.GetProperty("player").GetInt32();
+                    if (a.TryGetProperty("tp", out var tp)) { g.State.Players[pid].X = tp[0].GetDouble(); g.State.Players[pid].Z = tp[1].GetDouble(); }
+                    if (a.TryGetProperty("cmd", out var c)) g.Submit(pid, CommandOf(c));
+                }
+                g.Step();
+                var ev = g.DrainEvents();
+                if (ev.Count > 0 || acted || g.Tick % 600 == 0)
+                    lines.Add($"{g.Tick - 1}|{g.Rng.S}|{Js.HashStr(Canon.Of(g.State)):x}|{Canon.Of(ev)}");
+            }
+            using (var fs = File.Create(file))
+            using (var gz = new GZipStream(fs, CompressionLevel.Optimal))
+            using (var w = new Utf8JsonWriter(gz))
+            {
+                w.WriteStartObject();
+                w.WritePropertyName("config"); cfg.WriteTo(w);
+                w.WriteString("source", "csharp");
+                w.WriteNumber("ticks", ticks);
+                w.WritePropertyName("actions"); r.GetProperty("actions").WriteTo(w);
+                w.WriteStartArray("lines"); foreach (var l in lines) w.WriteStringValue(l); w.WriteEndArray();
+                w.WriteEndObject();
+            }
+            Console.WriteLine($"regen {Path.GetFileName(file)}: {lines.Count} lines, ended {g.State.Phase} night {g.State.Night} floor {g.State.Floor}");
+        }
+    }
+
+    // ------------------------------------------------------------------ fuzz: random play through every game
+
+    /// <summary>Random commands at every table on both floors, through whole runs: no exception, the bank
+    /// never below zero, and the command log replays to the same hash.</summary>
+    static void Fuzz()
+    {
+        int rounds = 0, runs = 0;
+        var seen = new HashSet<string>();
+        for (uint seed = 1; seed <= 24; seed++)
+        {
+            var opts = new GameOpts { Seed = seed * 977, Players = seed % 4 == 0 ? 2 : 1, StartFloor = seed % 2 == 0 ? 2 : 1, Curve = seed % 3 == 0 ? "house" : "easy", Home = seed % 5 == 0,
+                Unlocked = new[] { "insulated", "snake" } };
+            var g = new Game(opts);
+            var d = new Rng(seed);
+            string fail = null;
+            try
+            {
+                while (g.Tick < 160000 && g.State.Phase != Phase.Over)
+                {
+                    var s = g.State;
+                    for (int pid = 0; pid < s.Players.Count; pid++)
+                    {
+                        if (d.Next() > 0.06) continue;
+                        var p = s.Players[pid];
+                        var floor = Layout.FloorOf(s.Floor);
+                        switch (s.Phase)
+                        {
+                            case Phase.Home:
+                            {
+                                double r = d.Next();
+                                if (r < 0.3) { p.X = Home.ComputerStand.X; p.Z = Home.ComputerStand.Z; g.Submit(pid, d.Next() < 0.2 ? Command.Reroll() : Command.Buy(s.Shop.Count > 0 ? d.Pick(s.Shop) : "x")); }
+                                else if (r < 0.5) { p.X = Home.MailboxStand.X; p.Z = Home.MailboxStand.Z; g.Submit(pid, Command.Pickup()); }
+                                else { p.X = Home.CarStand.X; p.Z = Home.CarStand.Z; g.Submit(pid, Command.Drive()); }
+                                break;
+                            }
+                            case Phase.Floor:
+                            {
+                                if (p.Seat == null)
+                                {
+                                    if (d.Next() < 0.15) { p.X = floor.BarStand.X; p.Z = floor.BarStand.Z; g.Submit(pid, Command.Order(d.Pick(Drinks.All).Id)); break; }
+                                    var t = d.Pick(floor.Tables);
+                                    p.X = t.Stand.X; p.Z = t.Stand.Z;
+                                    g.Submit(pid, Command.Sit(t.Table));
+                                    break;
+                                }
+                                string id = p.Seat;
+                                seen.Add(id);
+                                double? amt = d.Next() < 0.5 ? (double?)null : d.Int(1, 30) * 50;
+                                Command c;
+                                switch (id)
+                                {
+                                    case "hilo": c = Command.CallIt(id, d.Pick(new[] { "hi", "lo" }), amt); break;
+                                    case "redline": c = Command.CallIt(id, d.Pick(new[] { "red", "black" }), amt); break;
+                                    case "roulette": c = Command.CallIt(id, d.Pick(new[] { "red", "black", "odd", "even", "low", "high", "d1", "d2", "d3", "n0", "n17", "n36", "bogus" }), amt); break;
+                                    case "twentyone": c = s.Tables[id].Hand?.Stage == "play" ? Command.CallIt(id, d.Pick(new[] { "hit", "stand", "double", "split" })) : Command.Bet(id, amt); break;
+                                    case "crash": c = s.Tables[id].Crash != null ? Command.CallIt(id, "cash") : new Command { T = "spin", Table = id, Amount = amt, Call = d.Next() < 0.5 ? "3" : null }; break;
+                                    default: c = Command.Spin(id, amt); break;
+                                }
+                                double r2 = d.Next();
+                                if (r2 < 0.08) c = Command.Ride(id);
+                                else if (r2 < 0.12) c = Command.Stand();
+                                if (s.Bank < 400) s.Bank += 2000;
+                                g.Submit(pid, c);
+                                rounds++;
+                                break;
+                            }
+                            case Phase.Choice: g.Submit(pid, d.Next() < 0.5 ? Command.Pay() : Command.Gamble()); break;
+                            case Phase.Circuit:
+                                if (s.Circuit.Turn == "team") { var up = CircuitPlay.Up(s.Circuit); if (up.Count > 0) g.Submit(pid, Command.Activate(d.Pick(up))); }
+                                break;
+                            case Phase.Wheel: g.Submit(pid, Command.Fortune()); break;
+                            case Phase.Summary: g.Submit(pid, Command.Ready()); break;
+                        }
+                    }
+                    g.Step();
+                    g.DrainEvents();
+                    if (g.State.Bank < 0) { fail = $"bank {g.State.Bank} at tick {g.Tick}"; break; }
+                }
+            }
+            catch (Exception e) { fail = e.GetType().Name + ": " + e.Message + " " + (e.StackTrace ?? "").Split('\n').FirstOrDefault(); }
+            Check(fail == null, $"fuzz seed {seed}: {fail}");
+            runs++;
+        }
+        Check(seen.IsSupersetOf(new[] { "roulette", "craps", "pegdrop", "crash", "bandit", "twentyone", "hilo", "wheel", "redline", "deadman" }), "fuzz: didn't reach every table: " + string.Join(",", seen));
+        Console.WriteLine($"ok   fuzz: {runs} runs, {rounds} commands at the tables, tables reached {seen.Count}");
+    }
+
     static string Clip(string s, int n = 400) => s.Length <= n ? s : s.Substring(0, n) + "…";
 
     // ------------------------------------------------------------------ replay determinism
@@ -225,7 +369,8 @@ static class Program
             if (t.Pays != null) Check(Math.Abs(t.Pays.Value * t.WinP - t.Rtp) / t.Rtp < 0.005, $"data: {t.Id} pays x p = {t.Pays * t.WinP} != RTP {t.Rtp}");
             Check(t.Bet.Std >= t.Bet.Min && t.Bet.Std <= t.Bet.Max && (t.Bet.Std - t.Bet.Min) % t.Bet.Step == 0, $"data: {t.Id} standard bet off its steps");
             Check(t.ResolveS < t.RoundS, $"data: {t.Id} resolves slower than a round");
-            Check(Layout.Floor1.TableOf(t.Id) != null, $"data: table {t.Id} isn't placed on floor 1");
+            Check(new[] { 1, 2 }.Any(f => Vig.Sim.Data.Tables.OnFloor(f).Contains(t.Id)), $"data: table {t.Id} is on no floor");
+            foreach (int f in new[] { 1, 2 }) if (Vig.Sim.Data.Tables.OnFloor(f).Contains(t.Id)) Check(Layout.FloorOf(f).TableOf(t.Id) != null, $"data: table {t.Id} isn't placed on floor {f}");
             Console.WriteLine($"ok   {t.Id,-10} tier {t.Tier,-4} RTP {t.Rtp} (enumerated {odds.Rtp:F4}), win {odds.WinP:F3}");
         }
         // the tier rule: RTP rises with the tier (PLAN pillar 1)
@@ -249,12 +394,12 @@ static class Program
         foreach (var e in Collectors.Endings) Check(Derived(e.Derivation), $"data: ending {e.Id} lacks a derivation");
         Check(Derived(Home.PostS.Derivation), "data: the post lacks a derivation");
         // the layout: every stand point is clear of the colliders, or you couldn't reach it
-        var f = Layout.Floor1;
+        foreach (var f in new[] { Layout.Floor1, Layout.Floor2 })
         foreach (var t in f.Tables)
         {
             var (x, z) = Vig.Sim.Systems.MovementSystem.Collide(t.Stand.X, t.Stand.Z, Layout.PlayerR, f.Colliders);
             Check(Math.Abs(x - t.Stand.X) < 0.35 && Math.Abs(z - t.Stand.Z) < 0.35, $"layout: {t.Table}'s stand point is inside a collider");
         }
-        Console.WriteLine($"ok   data: {Vig.Sim.Data.Tables.All.Length} tables, {Charms.All.Length} charms, {f.Colliders.Length} floor colliders");
+        Console.WriteLine($"ok   data: {Vig.Sim.Data.Tables.All.Length} tables, {Charms.All.Length} charms, {Layout.Floor1.Colliders.Length} + {Layout.Floor2.Colliders.Length} floor colliders");
     }
 }

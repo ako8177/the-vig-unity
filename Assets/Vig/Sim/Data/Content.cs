@@ -25,7 +25,11 @@ namespace Vig.Sim.Data
             new MarkDef { Id = "sticky", Name = "Sticky Floor", Team = true, DurS = 45, Text = "WALK SPEED -30%", Derivation = "DESIGN.md §3: Sticky Floor, move speed -30% for 45 s" },
             new MarkDef { Id = "blackout", Name = "Blackout", Team = true, DurS = 45, Text = "ODDS HIDDEN ON EVERY TABLE", Derivation = "DESIGN.md §3: Blackout, odds hidden on every table for 45 s (and it says so)" },
             new MarkDef { Id = "tax", Name = "Tax", Team = true, DurS = 0, Text = "5% OF THE BANK, TAKEN NOW", Derivation = "DESIGN.md §3: Tax, 5% of the bank, immediately" },
+            new MarkDef { Id = "pegged", Name = "Pegged", Team = false, DurS = 30, Text = "-5% ON YOUR PEG DROP PAYOUTS PER STACK", Derivation = "DESIGN.md §11: the center slot, -5% to that player's Peg Drop payouts for 30 s, stacking to 10, like Hi-Lo's" },
         };
+
+        /// <summary>The personal marks that stack and tax their own table (Hi-Lo's, Peg Drop's).</summary>
+        public static string StackingMarkOf(string table) => table == "hilo" ? "hilo" : table == "pegdrop" ? "pegged" : null;
         static readonly Dictionary<string, MarkDef> byId = All.ToDictionary(m => m.Id);
         public static MarkDef ById(string id) => byId[id];
 
@@ -78,6 +82,37 @@ namespace Vig.Sim.Data
             new CharmDef { Id = "insulated", Name = "Insulated Kit", Price = 4, Systems = new[] { "circuit", "table" }, Unlock = 0,
                 Text = new[] { "THE CIRCUIT: TRACE 2 WIRES FREE", "RUBBER SOLES: STICKY FLOOR CAN'T SLOW YOU" },
                 Derivation = "DESIGN.md §5 (DECISIONS #81): unlocked by killing the first Collector at the Circuit; two free traces a duel (you win 76%, not 50%); the team mark Sticky Floor doesn't slow its wearer; price 4" },
+            // ---- the second set (DESIGN.md §12, U14)
+            new CharmDef { Id = "hothand", Name = "Hot Hand", Price = 4, Systems = new[] { "table" },
+                Text = new[] { "EACH WIN IN A ROW AT A TABLE:", "+10% ON ITS PAYOUTS (UP TO +50%)" },
+                Derivation = "DESIGN.md §12: +10% a win in a row at the same table, capped at +50%; a loss or a new table resets; price 4" },
+            new CharmDef { Id = "redrover", Name = "Red Rover", Price = 3, Systems = new[] { "table", "lives" },
+                Text = new[] { "RED LINE: THE CALL THAT COULD", "COST A LIFE PAYS 4x, NOT 2.5x" },
+                Derivation = "DESIGN.md §12: at two losses in a row (one from a life) a Red Line win pays 4x; the danger call becomes the tempting one; price 3" },
+            new CharmDef { Id = "counter", Name = "Card Counter", Price = 3, Systems = new[] { "table" },
+                Text = new[] { "TWENTY-ONE: SEE THE COUNT;", "A NATURAL PAYS 2:1" },
+                Derivation = "DESIGN.md §12: naturals pay 2:1 (RTP about +0.023) and the screen shows the running count; price 3" },
+            new CharmDef { Id = "snake", Name = "Snake Charmer", Price = 5, Systems = new[] { "table", "lives" }, Unlock = 1,
+                Text = new[] { "DEAD MAN'S HAND: SNAKE EYES", "WINS 6x INSTEAD OF A LIFE" },
+                Derivation = "DESIGN.md §12: snake eyes becomes a win (10 of 36 x 6 = RTP 1.67, no life); unlocked by killing the second Collector; price 5" },
+            new CharmDef { Id = "interest", Name = "Compound Interest", Price = 4, Systems = new[] { "collector" },
+                Text = new[] { "EVERY NEW NIGHT: +10% OF", "THE BANK (UP TO +$600)" },
+                Derivation = "DESIGN.md §12: +10% of the bank at the start of each night after the first, at most $600, once for the team; price 4" },
+            new CharmDef { Id = "comp", Name = "Comp Card", Price = 2, Systems = new[] { "table" },
+                Text = new[] { "DRINKS ARE ON THE HOUSE;", "THEIR EDGE LASTS TWICE AS LONG" },
+                Derivation = "DESIGN.md §12: drinks cost $0 and their edge runs 2x its buzz; price 2" },
+            new CharmDef { Id = "seven", Name = "Lucky Seven", Price = 3, Systems = new[] { "table" },
+                Text = new[] { "THE BANDIT: 7 7 7 PAYS 25x", "(NOT 10x)" },
+                Derivation = "DESIGN.md §12: a 7-line pays 25x; the Bandit's RTP goes 0.950 → about 1.03; price 3" },
+            new CharmDef { Id = "foot", Name = "Rabbit's Foot", Price = 4, Systems = new[] { "table", "lives" },
+                Text = new[] { "ONCE A NIGHT: A LOSING ROLL AT", "HI-LO OR DEAD MAN'S IS ROLLED AGAIN" },
+                Derivation = "DESIGN.md §12: the first losing Hi-Lo or Dead Man's roll each night is rerolled and the reroll stands; price 4" },
+            new CharmDef { Id = "chute", Name = "Parachute", Price = 4, Systems = new[] { "table", "lives" },
+                Text = new[] { "CRASH: A CRASH HANDS HALF YOUR", "BET BACK AND NEVER COSTS A LIFE" },
+                Derivation = "DESIGN.md §12: a crash returns half the stake and its life cost is gone; price 4" },
+            new CharmDef { Id = "thumb", Name = "Croupier's Thumb", Price = 3, Systems = new[] { "table" },
+                Text = new[] { "ROULETTE: ONE NUMBER", "PAYS 45x (NOT 36x)" },
+                Derivation = "DESIGN.md §12: a straight-up number pays 45x, RTP 45/37 = 1.22 on numbers; price 3" },
         };
         static readonly Dictionary<string, CharmDef> byId = All.ToDictionary(c => c.Id);
         public static CharmDef ById(string id) => id != null && byId.TryGetValue(id, out var c) ? c : null;
@@ -123,7 +158,7 @@ namespace Vig.Sim.Data
             new SlotDef("twoloss", "TWO LOSSES", "RED LINE TAKES A LIFE ON 2 LOSSES", "DESIGN.md §7: Bane, blood tables kill on two losses"),
             new SlotDef("longmarks", "LONG MARKS", "HI-LO MARKS LAST 60 S", "DESIGN.md §7: Bane, Hi-Lo marks last 60 s"),
             new SlotDef("dearsoul", "DEAR SOULS", "SOUL BUYBACK COSTS 75%", "DESIGN.md §7: Bane, soul buyback 75%; solo, -$500 off the next bank (DECISIONS #51)"),
-            new SlotDef("overloads", "4 LIVE LEVERS", "THE CIRCUIT HAS 4 LIVE LEVERS", "DESIGN.md §7: Bane, the Circuit has 4 live levers of 10 (you win 42%: DECISIONS #80)"),
+            new SlotDef("overloads", "+1 LIVE LEVER", "THE CIRCUIT HAS ONE MORE LIVE LEVER", "DESIGN.md §7: Bane, one more live lever than the floor's (floor 1: 4 of 10, you win 42%: DECISIONS #80; floor 2: 5 of 12, 44%)"),
         };
 
         /// <summary>Solo, Dear Souls has no soul to price: it docks the next night's bank instead (DECISIONS #51).</summary>
@@ -157,6 +192,12 @@ namespace Vig.Sim.Data
                 Floor = 1, Levers = 10, Live = 3, PlayerShocks = 2, CollShocks = 2, SafeBank = 300, SafeMarkers = 1, KitTraces = 2,
                 CollectorTurnS = 2.8, AfterShockS = 4.6, OddsWin = 0.5, OddsWithKit = 0.76, OddsBane = 0.42,
                 Derivation = "DESIGN.md §6 (DECISIONS #80): 10 levers, 3 live, two shocks each, both pick at random: a coin flip (50%); the Insulated Kit's 2 traces 76%; the Bane's 4 live levers 42%",
+            },
+            new CircuitRules
+            {
+                Floor = 2, Levers = 12, Live = 4, PlayerShocks = 2, CollShocks = 2, SafeBank = 600, SafeMarkers = 1, KitTraces = 2,
+                CollectorTurnS = 2.8, AfterShockS = 4.6, OddsWin = 0.45, OddsWithKit = 0.63, OddsBane = 0.44,
+                Derivation = "DESIGN.md §6, §11: floor 2's panel, 12 levers, 4 live, a dead lever pays $600; you win 45% (63% with the Kit pulling known-dead levers first, 44% with the Bane's fifth live lever), 200k random duels",
             },
         };
 
@@ -231,7 +272,7 @@ namespace Vig.Sim.Data
 
         public static readonly EndingDef[] Endings =
         {
-            new EndingDef { Id = "paid", Title = "PAID IN FULL", Killed = 0, Text = "THREE NIGHTS, THREE QUOTAS. THE DEBT IS PAID. THE STAIRS GO DOWN, NOT UP.", Derivation = "DESIGN.md §7 (DECISIONS #81): walked out, no Collector killed" },
+            new EndingDef { Id = "paid", Title = "PAID IN FULL", Killed = 0, Text = "SIX NIGHTS, TWO FLOORS, EVERY QUOTA. THE DEBT IS PAID. THE STAIRS GO DOWN, NOT UP.", Derivation = "DESIGN.md §7 (DECISIONS #81): walked out, no Collector killed" },
             new EndingDef { Id = "chair", Title = "AN EMPTY CHAIR", Killed = 1, Text = "A COLLECTOR DIED AT YOUR TABLE. YOU WALK OUT RICHER, AND THE HOUSE KNOWS YOUR FACE.", Derivation = "DESIGN.md §7 (DECISIONS #81): walked out having killed one or two" },
             new EndingDef { Id = "house", Title = "THE HOUSE IS YOURS", Killed = 3, Text = "THREE CHAIRS, EMPTY. ON THE LAST ONE, THE KEYS TO THE VIG.", Derivation = "DESIGN.md §7 (DECISIONS #81): walked out having killed three" },
         };
@@ -246,6 +287,10 @@ namespace Vig.Sim.Data
     public static class Feel
     {
         public const double DiceS = 1.6, DeadmanS = 2.2, CardS = 2.1, WheelS = 4.2, BanditS = 1.8;
+        /// <summary>floor 2: the ball round the wheel, the dice down the craps table, the ball down the pegs</summary>
+        public const double RouletteS = 5.0, CrapsS = 1.9, PegS = 2.6;
+        /// <summary>Crash's climb: the multiplier is e^(CrashRate x seconds), 2x at 2.5 s, 10x at 8.2 s</summary>
+        public const double CrashRate = 0.28;
         /// <summary>Twenty-One: a card off the shoe every DealGap s (DECISIONS #83)</summary>
         public const double DealGap = 0.42;
         public const double CelebrateS = 2.2;

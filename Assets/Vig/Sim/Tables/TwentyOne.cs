@@ -264,7 +264,7 @@ namespace Vig.Sim.Tables
                 int pv = HandValue(h.Cards).total;
                 double x = 0; string word;
                 if (pn && dn) { x = 1; word = "BOTH NATURAL: PUSH"; }
-                else if (pn) { x = 2.5; word = "NATURAL"; }
+                else if (pn) { x = p.Charms.Contains("counter") ? 3 : 2.5; word = "NATURAL"; }
                 else if (dn) word = "DEALER NATURAL";
                 else if (pv > 21) word = $"BUST {pv}";
                 else if (dv > 21) { x = 2; word = one ? $"DEALER BUSTS {dv}" : $"WIN {pv}"; }

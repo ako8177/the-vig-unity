@@ -82,7 +82,7 @@ namespace Vig.Sim.Tables
         public static readonly string[] Rank = { "", "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K" };
         public static bool IsRed(Card c) => c.S < 2;
 
-        public static readonly TableModule[] All = { new Bandit(), new TwentyOne(), new HiLo(), new WheelOfMarks(), new RedLine(), new DeadMan() };
+        public static readonly TableModule[] All = { new Bandit(), new TwentyOne(), new HiLo(), new WheelOfMarks(), new RedLine(), new DeadMan(), new Roulette(), new Craps(), new PegDrop(), new Crash() };
         static readonly Dictionary<string, TableModule> byId = All.ToDictionary(m => m.Id);
         public static TableModule ById(string id) => id != null && byId.TryGetValue(id, out var m) ? m : null;
     }
@@ -118,7 +118,7 @@ namespace Vig.Sim.Tables
         public sealed class Hit { public int[] Cells; public string Name; public double X; }
 
         /// <summary>Every pattern a grid hits, and the total it returns per $1 bet.</summary>
-        public static double GridPays(IReadOnlyList<int> g, List<Hit> hits = null)
+        public static double GridPays(IReadOnlyList<int> g, List<Hit> hits = null, double seven = PayLine7)
         {
             hits = hits ?? new List<Hit>();
             foreach (var line in Lines)
@@ -126,7 +126,7 @@ namespace Vig.Sim.Tables
                 int a = g[line[0]], b = g[line[1]], c = g[line[2]];
                 if (a == Blank || b == Blank || c == Blank) continue;
                 bool same = a == b && b == c;
-                if (same && a == Seven) hits.Add(new Hit { Cells = line, Name = "7 7 7", X = PayLine7 });
+                if (same && a == Seven) hits.Add(new Hit { Cells = line, Name = "7 7 7", X = seven });
                 else if (same && a == Star) hits.Add(new Hit { Cells = line, Name = "THREE STARS", X = PayLineStar });
                 else if (same) hits.Add(new Hit { Cells = line, Name = "THREE BARS", X = PayLineBar });
                 else hits.Add(new Hit { Cells = line, Name = "THREE SYMBOLS", X = PayLineAny });
@@ -182,13 +182,24 @@ namespace Vig.Sim.Tables
             var grid = new List<int>();
             for (int i = 0; i < Cells; i++) grid.Add(Strip[g.Rng.Int(0, Strip.Length - 1)]);
             var hits = new List<Hit>();
-            double x = GridPays(grid, hits);
+            double x = GridPays(grid, hits, p.Charms.Contains("seven") ? 25 : PayLine7);
             double factor = Rules.PayoutFactor(g, p, Id);
             int ret = Js.RoundInt(bet * x * factor);
+            // the progressive: every pull feeds it; the whole grid alike takes it (DESIGN.md §12)
+            var s = g.State;
+            s.Pot += Js.RoundInt(bet * Economy.PotShare.V);
+            bool jackpot = hits.Any(h => h.Name == "THE WHOLE GRID");
+            int? pot = null;
+            if (jackpot)
+            {
+                pot = s.Pot;
+                ret += s.Pot;
+                s.Pot = Economy.PotSeed.I;
+            }
             return StartResult.Of(new Outcome
             {
                 Table = Id, Player = p.Id, Bet = bet, Ret = ret, Win = ret > bet, Factor = factor, Reels = grid,
-                Jackpot = hits.Any(h => h.Name == "THE WHOLE GRID"), Text = GridText(hits, ret),
+                Jackpot = jackpot, Pot = pot, Text = GridText(hits, ret),
             });
         }
     }
@@ -217,12 +228,14 @@ namespace Vig.Sim.Tables
             if (no.HasValue) return no.Value;
             int die = g.Rng.Int(1, 6);
             bool win = (cmd.Call == "hi") == (die >= 4);
+            bool foot = false;
+            if (!win && Rules.UseFoot(p)) { foot = true; die = g.Rng.Int(1, 6); win = (cmd.Call == "hi") == (die >= 4); }
             double factor = Rules.PayoutFactor(g, p, Id);
             int ret = win ? Js.RoundInt(bet * Def.Pays.Value * factor) : 0;
             return StartResult.Of(new Outcome
             {
                 Table = Id, Player = p.Id, Bet = bet, Ret = ret, Win = win, Factor = factor, Dice = new List<int> { die }, Call = cmd.Call,
-                Text = win ? $"{die}: {cmd.Call.ToUpperInvariant()} WINS ${ret}" : $"{die}: MARKED",
+                Text = (foot ? "THE FOOT ROLLS AGAIN. " : "") + (win ? $"{die}: {cmd.Call.ToUpperInvariant()} WINS ${ret}" : $"{die}: MARKED"),
             });
         }
 
@@ -311,7 +324,9 @@ namespace Vig.Sim.Tables
             var card = DrawCard(g);
             bool win = (cmd.Call == "red") == IsRed(card);
             double factor = Rules.PayoutFactor(g, p, Id);
-            int ret = win ? Js.RoundInt(bet * Def.Pays.Value * factor) : 0;
+            // Red Rover: the call that could cost a life pays 4x (DESIGN.md §12)
+            double pays = p.Charms.Contains("redrover") && p.RedStreak == StreakLimit(g) - 1 ? 4 : Def.Pays.Value;
+            int ret = win ? Js.RoundInt(bet * pays * factor) : 0;
             return StartResult.Of(new Outcome { Table = Id, Player = p.Id, Bet = bet, Ret = ret, Win = win, Factor = factor, Card = card, Call = cmd.Call, Text = win ? $"WINS ${ret}" : "LOSES" });
         }
 
@@ -367,14 +382,18 @@ namespace Vig.Sim.Tables
             var no = TakeStake(g, p, cmd, out int bet);
             if (no.HasValue) return no.Value;
             int d0 = g.Rng.Int(1, 6), d1 = g.Rng.Int(1, 6);
-            bool win = Wins(d0, d1);
+            bool charmer = p.Charms.Contains("snake");
+            bool Won(int a, int b) => Wins(a, b) || (charmer && IsSnake(a, b));
+            bool win = Won(d0, d1);
+            bool foot = false;
+            if (!win && Rules.UseFoot(p)) { foot = true; d0 = g.Rng.Int(1, 6); d1 = g.Rng.Int(1, 6); win = Won(d0, d1); }
             double factor = Rules.PayoutFactor(g, p, Id);
             int ret = win ? Js.RoundInt(bet * Def.Pays.Value * factor) : 0;
             bool snake = IsSnake(d0, d1);
             return StartResult.Of(new Outcome
             {
                 Table = Id, Player = p.Id, Bet = bet, Ret = ret, Win = win, Factor = factor, Dice = new List<int> { d0, d1 },
-                Text = win ? $"WINS ${ret}" : snake ? "SNAKE EYES: A LIFE" : "LOSES",
+                Text = (foot ? "THE FOOT ROLLS AGAIN. " : "") + (win && snake ? $"SNAKE EYES, CHARMED: ${ret}" : win ? $"WINS ${ret}" : snake ? "SNAKE EYES: A LIFE" : "LOSES"),
             });
         }
 
@@ -386,7 +405,7 @@ namespace Vig.Sim.Tables
                 Rules.AddMarkers(g, n, "dead man's win");
                 o.Markers = n;
             }
-            else if (IsSnake(o.Dice[0], o.Dice[1]))
+            else if (IsSnake(o.Dice[0], o.Dice[1]) && !p.Charms.Contains("snake"))
             {
                 o.LifeLost = true;
                 Rules.LoseLife(g, p, "dead man's hand");

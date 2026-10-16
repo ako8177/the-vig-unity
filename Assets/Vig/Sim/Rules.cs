@@ -25,8 +25,12 @@ namespace Vig.Sim
         public static double FactorOf(State s, PlayerState p, string table)
         {
             double f = 1;
-            if (Marks.HiloTables.Contains(table))
-                f *= 1 - Marks.HiloPerStack * (s.Marks.FirstOrDefault(m => m.Id == "hilo" && m.Player == p.Id)?.Stacks ?? 0);
+            // a stacking personal mark taxes its own table: Hi-Lo's, Peg Drop's
+            var sm = Marks.StackingMarkOf(table);
+            if (sm != null)
+                f *= 1 - Marks.HiloPerStack * (s.Marks.FirstOrDefault(m => m.Id == sm && m.Player == p.Id)?.Stacks ?? 0);
+            // Hot Hand: +10% a win in a row at this table, to +50% (DESIGN.md §12)
+            if (p.HotTable == table && p.HotRun > 0 && p.Charms.Contains("hothand")) f *= 1 + 0.1 * Math.Min(5, p.HotRun);
             if (s.Marks.Any(m => m.Id == "colddeck" && m.Player == -1)) f *= Marks.ColdDeck;
             var tier = Data.Tables.ById(table)?.Tier;
             if (tier != null)
@@ -69,7 +73,7 @@ namespace Vig.Sim
             if (m != null)
             {
                 m.Left = Math.Max(m.Left, left);
-                if (id == "hilo") m.Stacks = Math.Min(Marks.HiloMaxStacks, m.Stacks + 1);
+                if (id == "hilo" || id == "pegged") m.Stacks = Math.Min(Marks.HiloMaxStacks, m.Stacks + 1);
             }
             else
             {
@@ -137,6 +141,14 @@ namespace Vig.Sim
         }
 
         public static List<PlayerState> Living(Game g) => g.State.Players.Where(p => !p.Ghost).ToList();
+
+        /// <summary>Rabbit's Foot: true (and spent) the first time a player wearing it loses a roll tonight.</summary>
+        public static bool UseFoot(PlayerState p)
+        {
+            if (!p.Charms.Contains("foot") || p.FootUsed) return false;
+            p.FootUsed = true;
+            return true;
+        }
 
         public static double Dist2(double x, double z, V2 at) => (x - at.X) * (x - at.X) + (z - at.Z) * (z - at.Z);
     }

@@ -40,7 +40,18 @@ namespace Vig.Sim.Systems
                 var r = TableModule.ById("twentyone").Start(g, owner, Vig.Sim.Command.CallIt("twentyone", "leave"));
                 if (r.Outcome != null) s.Tables["twentyone"].Pending = r.Outcome;
             }
+            // a craps bet riding on a point comes back; a Crash in the air cashes out where it is
+            var craps = s.Tables["craps"];
+            if (craps.Point != 0)
+            {
+                s.Bank += craps.PointBet;
+                craps.Point = 0;
+                craps.PointBet = 0;
+            }
+            var crash = s.Tables["crash"];
+            if (crash.Crash != null && crash.Pending == null) crash.Pending = Crash.Leave(g, crash);
             foreach (var id in State.TableIds) TablesSystem.Land(g, id);
+            foreach (var id in State.TableIds) s.Tables[id].Ride = null;
             foreach (var p in s.Players)
             {
                 TablesSystem.StandUp(g, p);
@@ -142,7 +153,7 @@ namespace Vig.Sim.Systems
             // at the Collector's table
             var ph = g.State.Phase;
             if (ph != Phase.Floor && ph != Phase.Home) return;
-            var cols = ph == Phase.Home ? Home.Colliders : Layout.Floor1.Colliders;
+            var cols = ph == Phase.Home ? Home.Colliders : Layout.FloorOf(g.State.Floor).Colliders;
             bool sticky = Rules.HasTeamMark(g, "sticky");
             foreach (var p in g.State.Players)
             {
@@ -166,7 +177,8 @@ namespace Vig.Sim.Systems
     /// the bank at the call; its result is held back for the table's ResolveS and then lands.</summary>
     public sealed class TablesSystem : SystemBase
     {
-        public static readonly HashSet<string> OpenTables = new HashSet<string>(State.TableIds);
+        /// <summary>Is this table on the floor the run is on?</summary>
+        public static bool Open(Game g, string table) => table != null && Vig.Sim.Data.Tables.OnFloor(g.State.Floor).Contains(table);
 
         /// <summary>Land a table's held-back result: pay it out and charge its price.</summary>
         public static void Land(Game g, string id)
@@ -183,6 +195,11 @@ namespace Vig.Sim.Systems
             t.Last = o;
             t.Rounds++;
             s.Stats.Rounds++;
+            // Hot Hand counts wins in a row at one table (DESIGN.md §12)
+            if (o.Win) { if (p.HotTable == id) p.HotRun++; else { p.HotTable = id; p.HotRun = 1; } }
+            else if (o.Ret < o.Bet) { p.HotTable = id; p.HotRun = 0; }
+            // a win's profit is offered to let ride, double or nothing (U16)
+            t.Ride = o.Win && o.Ret > o.Bet ? new Ride { Player = o.Player, Amount = o.Ret - o.Bet, Until = g.Tick + Rules.Ticks(Economy.RideS.V), Count = 0 } : null;
             if (o.Win)
             {
                 s.Stats.Wins++;
@@ -201,6 +218,12 @@ namespace Vig.Sim.Systems
             if (p.Seat == null) return;
             var table = p.Seat;
             // walking away from a Twenty-One hand stands on it
+            var tc = g.State.Tables["crash"];
+            if (table == "crash" && tc.Crash != null && tc.Pending == null)
+            {
+                var o = Crash.Leave(g, tc);
+                if (o != null) { tc.Pending = o; tc.Until = g.Tick; }
+            }
             var t21 = g.State.Tables["twentyone"];
             if (table == "twentyone" && t21.Hand?.Stage == "play" && t21.Pending == null)
             {
@@ -217,15 +240,45 @@ namespace Vig.Sim.Systems
         }
 
         public override string Id => "tables";
-        public override string[] Handles => new[] { "sit", "stand", "bet", "call", "spin" };
+        public override string[] Handles => new[] { "sit", "stand", "bet", "call", "spin", "ride" };
+
+        /// <summary>Let it ride: the last win's profit, double or nothing, at even odds (U16).</summary>
+        static void LetItRide(Game g, PlayerState p, string table)
+        {
+            var s = g.State;
+            if (s.Phase != Phase.Floor) { Refuse(g, p, "ride", "the tables are closed"); return; }
+            if (p.Seat != table || !s.Tables.TryGetValue(table, out var t)) { Refuse(g, p, "ride", "sit down first"); return; }
+            var r = t.Ride;
+            if (r == null || r.Player != p.Id || g.Tick > r.Until) { Refuse(g, p, "ride", "no win to ride"); return; }
+            if (s.Bank < r.Amount) { Refuse(g, p, "ride", "the bank is short"); return; }
+            bool won = g.Rng.Int(0, 1) == 1;
+            if (won)
+            {
+                s.Bank += r.Amount;
+                s.Stats.WonDollars += r.Amount;
+                r.Amount *= 2;
+                r.Count++;
+                r.Until = g.Tick + Rules.Ticks(Economy.RideS.V);
+                g.Emit(new SimEvent { T = "ride", Player = p.Id, Table = table, Won = true, Amount = r.Amount, Count = r.Count });
+                if (r.Count >= Economy.RideMax.I) t.Ride = null;
+            }
+            else
+            {
+                s.Bank -= r.Amount;
+                s.Stats.LostDollars += r.Amount;
+                g.Emit(new SimEvent { T = "ride", Player = p.Id, Table = table, Won = false, Amount = r.Amount, Count = r.Count });
+                t.Ride = null;
+            }
+        }
 
         public override void Command(Game g, PlayerState p, Command cmd)
         {
             var s = g.State;
+            if (cmd.T == "ride") { LetItRide(g, p, cmd.Table); return; }
             if (cmd.T == "sit")
             {
-                var pl = Layout.Floor1.TableOf(cmd.Table);
-                if (pl == null || !OpenTables.Contains(cmd.Table)) { Refuse(g, p, cmd.T, "no such table"); return; }
+                var pl = Layout.FloorOf(s.Floor).TableOf(cmd.Table);
+                if (pl == null || !Open(g, cmd.Table)) { Refuse(g, p, cmd.T, "no such table"); return; }
                 if (s.Phase != Phase.Floor) { Refuse(g, p, cmd.T, "the tables are closed"); return; }
                 if (p.Seat != null) { Refuse(g, p, cmd.T, "already seated"); return; }
                 if (p.Ghost) { Refuse(g, p, cmd.T, "ghosts cannot bet"); return; }
@@ -251,6 +304,7 @@ namespace Vig.Sim.Systems
             if (t.Pending != null) { Refuse(g, p, cmd.T, "wait for the result"); return; }
             var r = mod.Start(g, p, cmd);
             if (r.Refusal != null) { Refuse(g, p, cmd.T, r.Refusal); return; }
+            t.Ride = null;
             if (r.Outcome != null)
             {
                 int n = HoldTicks(mod, r.Outcome);
@@ -264,10 +318,18 @@ namespace Vig.Sim.Systems
         {
             var s = g.State;
             if (s.Phase != Phase.Floor) return;
+            // Crash climbs: an auto cash-out or the crash lands now
+            var tc = s.Tables["crash"];
+            if (tc.Crash != null && tc.Pending == null)
+            {
+                var o = Crash.Climb(g, tc);
+                if (o != null) { tc.Pending = o; tc.Until = g.Tick; }
+            }
             foreach (var id in State.TableIds)
             {
                 var t = s.Tables[id];
                 if (t.Pending != null && g.Tick >= t.Until) Land(g, id);
+                if (t.Ride != null && g.Tick > t.Ride.Until) t.Ride = null;
             }
         }
     }
@@ -340,6 +402,9 @@ namespace Vig.Sim.Systems
         public static bool AtCage(PlayerState p) => Rules.Dist2(p.X, p.Z, Layout.Floor1.CageStand) <= Layout.CageRadius * Layout.CageRadius;
         public static bool AtBar(PlayerState p) => Rules.Dist2(p.X, p.Z, Layout.Floor1.BarStand) <= Layout.BarRadius * Layout.BarRadius;
 
+        /// <summary>What a drink costs this player (the Comp Card: nothing).</summary>
+        public static int PriceOf(PlayerState p, DrinkDef d) => p.Charms.Contains("comp") ? 0 : d.Price;
+
         /// <summary>Why a player can't order this drink now, or null if they can.</summary>
         public static string CantOrder(Game g, PlayerState p, string drink)
         {
@@ -348,7 +413,7 @@ namespace Vig.Sim.Systems
             if (g.State.Phase != Phase.Floor) return "the bar is shut";
             if (p.Ghost) return "the bartender can't see you";
             if (!AtBar(p)) return "walk to the bar";
-            if (g.State.Bank < d.Price) return "the bank is short";
+            if (g.State.Bank < PriceOf(p, d)) return "the bank is short";
             return null;
         }
 
@@ -373,6 +438,7 @@ namespace Vig.Sim.Systems
             if (charm != null)
             {
                 if (charm.Unlock != null && !s.Unlocked.Contains(charm.Id)) return "locked: kill a Collector at his game";
+                if (s.Home && !s.Shop.Contains(charm.Id)) return "not in tonight's catalogue";
                 var coming = HomeSystem.PendingCharms(g, p.Id);
                 if (p.Charms.Contains(charm.Id)) return "already worn";
                 if (coming.Contains(charm.Id)) return "already in the post";
@@ -395,12 +461,13 @@ namespace Vig.Sim.Systems
                 var why0 = CantOrder(g, p, cmd.Drink);
                 if (why0 != null) { Refuse(g, p, "order", why0); return; }
                 var d = Drinks.ById(cmd.Drink);
-                g.State.Bank -= d.Price;
+                g.State.Bank -= PriceOf(p, d);
                 p.Drunk = Math.Min(Rules.Ticks(Drinks.BuzzMaxS), p.Drunk + Rules.Ticks(d.BuzzS));
-                // its edge runs for its own buzz; the same drink again starts it over, it doesn't stack
+                // its edge runs for its own buzz (twice that with the Comp Card); the same drink again starts it over
+                int edge = Rules.Ticks(d.BuzzS * (p.Charms.Contains("comp") ? 2 : 1));
                 var b = p.Buffs.FirstOrDefault(x => x.Drink == d.Id);
-                if (b != null) b.Left = Math.Max(b.Left, Rules.Ticks(d.BuzzS));
-                else p.Buffs.Add(new Buff { Drink = d.Id, Left = Rules.Ticks(d.BuzzS) });
+                if (b != null) b.Left = Math.Max(b.Left, edge);
+                else p.Buffs.Add(new Buff { Drink = d.Id, Left = edge });
                 g.Emit(new SimEvent { T = "drank", Player = p.Id, Drink = d.Id });
                 return;
             }
@@ -460,13 +527,31 @@ namespace Vig.Sim.Systems
 
         public static List<string> PendingItems(Game g) => g.State.Post.Orders.Concat(g.State.Post.Box).Select(o => o.Item).ToList();
 
+        /// <summary>Tonight's catalogue: ShopSize charms from the pool (U15).</summary>
+        public static void DrawShop(Game g)
+        {
+            var s = g.State;
+            var pool = Charms.All.Where(c => c.Unlock == null || s.Unlocked.Contains(c.Id)).Select(c => c.Id).ToList();
+            g.Rng.Shuffle(pool);
+            s.Shop = pool.Take(Economy.ShopSize.I).ToList();
+        }
+
         public override string Id => "home";
-        public override string[] Handles => new[] { "pickup", "drive" };
+        public override string[] Handles => new[] { "pickup", "drive", "reroll" };
 
         public override void Command(Game g, PlayerState p, Command cmd)
         {
             var s = g.State;
             if (s.Phase != Phase.Home) { Refuse(g, p, cmd.T, "you're not home"); return; }
+            if (cmd.T == "reroll")
+            {
+                if (!AtComputer(p)) { Refuse(g, p, cmd.T, "walk to the computer"); return; }
+                if (s.Markers < Economy.RerollCost.I) { Refuse(g, p, cmd.T, "not enough markers"); return; }
+                s.Markers -= Economy.RerollCost.I;
+                DrawShop(g);
+                g.Emit(new SimEvent { T = "shop", Player = p.Id, Items = s.Shop.ToList() });
+                return;
+            }
             if (cmd.T == "pickup")
             {
                 if (!AtMailbox(p)) { Refuse(g, p, cmd.T, "walk to the mailbox"); return; }
@@ -768,7 +853,7 @@ namespace Vig.Sim.Systems
         public static int NextQuota(Game g)
         {
             var s = g.State;
-            double q = s.Quota * Economy.QuotaGrowth.V * (s.Next.Discount ? 1 - Wheels.Discount : 1);
+            double q = (s.Curve == "house" ? s.Quota * Economy.QuotaGrowth.V : s.Quota + Economy.QuotaStep.V) * (s.Next.Discount ? 1 - Wheels.Discount : 1);
             return Js.RoundInt(q / 10) * 10;
         }
 
@@ -795,6 +880,21 @@ namespace Vig.Sim.Systems
             s.Quota = sum.NextQuota;
             s.Bank = Math.Max(s.Bank, Economy.BankFloor.I) + (s.Upgrades.Contains("bank500") ? 500 : 0) - s.NextDock;
             s.NextDock = 0;
+            // Compound Interest, once for the team (DESIGN.md §12)
+            if (s.Players.Any(p => !p.Ghost && p.Charms.Contains("interest")))
+            {
+                int interest = Math.Min(600, Js.RoundInt(s.Bank * 0.1));
+                s.Bank += interest;
+                g.Emit(new SimEvent { T = "interest", Amount = interest });
+            }
+            // three nights a floor, then the stairs down: a fresh progressive on the new floor
+            int floor = State.FloorOfNight(s.Night);
+            if (floor != s.Floor)
+            {
+                s.Floor = floor;
+                s.Pot = Economy.PotSeed.I;
+                g.Emit(new SimEvent { T = "floor", Floor = floor });
+            }
             s.Clock = State.NightTicks;
             s.Mods = s.Next.Clone();
             s.Next = new NightMods();
@@ -813,8 +913,12 @@ namespace Vig.Sim.Systems
                 p.Mx = p.Mz = 0;
                 p.Seat = null;
                 p.ApronUsed = false;
+                p.FootUsed = false;
                 p.RedStreak = 0;
+                p.HotTable = null;
+                p.HotRun = 0;
             }
+            if (s.Home) HomeSystem.DrawShop(g);
             s.Phase = s.Home ? Phase.Home : Phase.Floor;
             s.PhaseAt = g.Tick;
             g.Emit(new SimEvent { T = "night", Night = s.Night, Quota = s.Quota, Bank = s.Bank });

@@ -44,6 +44,10 @@ namespace Vig.Sim
         public static Command Callit() => new Command { T = "callit" };
         public static Command Ready() => new Command { T = "ready" };
         public static Command Move(double mx, double mz, double yaw, bool run = false) => new Command { T = "move", Mx = mx, Mz = mz, Yaw = yaw, Run = run };
+        /// <summary>let the last win at this table ride: double or nothing (U16)</summary>
+        public static Command Ride(string table) => new Command { T = "ride", Table = table };
+        /// <summary>a new catalogue on the computer at home, for a marker (U15)</summary>
+        public static Command Reroll() => new Command { T = "reroll" };
     }
 
     /// <summary>A command as it goes into the log: who sent it, and the tick it applies on.</summary>
@@ -88,5 +92,8 @@ namespace Vig.Sim
         public List<string> Items;
         public string Drink;
         public string Cmd;
+        public List<int> Dice;
+        public int? Point;
+        public int? Floor;
     }
 }

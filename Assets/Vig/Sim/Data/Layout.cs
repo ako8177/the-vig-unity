@@ -169,22 +169,39 @@ namespace Vig.Sim.Data
             yield return Collider.Box(p.X - w / 2, p.Z - d / 2, p.X + w / 2, p.Z + d / 2, 1, p.Kind);
         }
 
-        public static readonly Floor Floor1 = BuildFloor1();
+        public static readonly Floor Floor1 = BuildFloor(1);
+        /// <summary>Floor 2 (DESIGN.md §11): floor 1's shell (rooms, bar, cage, his table) with its own games,
+        /// each where the floor-1 game it replaces stood, and its own names and look.</summary>
+        public static readonly Floor Floor2 = BuildFloor(2);
 
-        static Floor BuildFloor1()
+        public static Floor FloorOf(int floor) => floor >= 2 ? Floor2 : Floor1;
+
+        static Floor BuildFloor(int id)
         {
+            bool two = id >= 2;
             var rooms = new[]
             {
-                new Room { Id = "floor", Name = "THE FLOOR", Tier = Data.Tier.Low, X0 = -14, Z0 = -2, X1 = 14, Z1 = 18, Ceiling = 5 },
-                new Room { Id = "lounge", Name = "THE LOUNGE", Tier = Data.Tier.Mid, X0 = -14, Z0 = -16, X1 = -0.2, Z1 = -2, Ceiling = 3.6 },
-                new Room { Id = "back", Name = "THE BACK ROOM", Tier = Data.Tier.High, X0 = 0.2, Z0 = -16, X1 = 14, Z1 = -2, Ceiling = 3.6 },
+                new Room { Id = "floor", Name = two ? "THE GOLD ROOM" : "THE FLOOR", Tier = Data.Tier.Low, X0 = -14, Z0 = -2, X1 = 14, Z1 = 18, Ceiling = 5 },
+                new Room { Id = "lounge", Name = two ? "THE MIRROR ROOM" : "THE LOUNGE", Tier = Data.Tier.Mid, X0 = -14, Z0 = -16, X1 = -0.2, Z1 = -2, Ceiling = 3.6 },
+                new Room { Id = "back", Name = two ? "THE FURNACE" : "THE BACK ROOM", Tier = Data.Tier.High, X0 = 0.2, Z0 = -16, X1 = 14, Z1 = -2, Ceiling = 3.6 },
             };
             var doorways = new[]
             {
-                new Doorway { X = -8, Z = -2, W = 2.6, H = 2.8, Along = "x", To = "lounge", Sign = "THE LOUNGE" },
-                new Doorway { X = 8, Z = -2, W = 2.6, H = 2.8, Along = "x", To = "back", Sign = "THE BACK ROOM" },
+                new Doorway { X = -8, Z = -2, W = 2.6, H = 2.8, Along = "x", To = "lounge", Sign = rooms[1].Name },
+                new Doorway { X = 8, Z = -2, W = 2.6, H = 2.8, Along = "x", To = "back", Sign = rooms[2].Name },
             };
-            var tables = new[]
+            var tables = two ? new[]
+            {
+                // THE GOLD ROOM: a real roulette wheel where floor 1's was for show, craps where Twenty-One stood
+                Place("roulette", -6.5, 4.5, 2.8, 1.5, 3.6),
+                Place("craps", 6.5, 5, 3.2, 1.6, 3.6),
+                // THE MIRROR ROOM
+                Cabinet(Place("pegdrop", -10.5, -8, 1.6, 0.9)),
+                Place("hilo", -4, -8, 1.8, 1.1),
+                // THE FURNACE
+                Place("crash", 3.6, -7, 2.2, 1.2),
+                Place("redline", 11, -7, 2.2, 1.2),
+            } : new[]
             {
                 // THE FLOOR: the Bandit sits in a bank of slots by the entrance, Twenty-One beside the bar's light
                 Cabinet(Place("bandit", -6.9, 11, 1.4, 0.9, 3.6)),
@@ -219,13 +236,13 @@ namespace Vig.Sim.Data
             Func<double[], IEnumerable<Prop>> slots = xs => xs.Select(x => new Prop { Kind = "slot", X = x, Z = slotZ, W = 1.4, D = 0.9, Room = "floor" });
             var props = new List<Prop>();
             // the banks of slots either side of the entrance aisle (the Bandit is one of the west bank)
-            props.AddRange(slots(new[] { -11.4, -9.9, -8.4, -5.4, -3.9 }));
+            props.AddRange(slots(two ? new[] { -11.4, -9.9, -8.4, -6.9, -5.4, -3.9 } : new[] { -11.4, -9.9, -8.4, -5.4, -3.9 }));
             props.AddRange(slots(new[] { 3.9, 5.4, 6.9, 8.4, 9.9 }));
             props.AddRange(new[]
             {
                 // the centerpiece: a ring of slots round a progressive jackpot tower
                 new Prop { Kind = "carousel", X = 0, Z = 5.6, W = 1.5, Room = "floor" },
-                new Prop { Kind = "roulette", X = -6.5, Z = 4.5, W = 2.8, D = 1.5, Room = "floor" },
+
                 new Prop { Kind = "cardtable", X = 10.4, Z = 4.5, W = 2.2, D = 1.2, Room = "floor" },
                 new Prop { Kind = "cardtable", X = -4.6, Z = 0.3, W = 2.2, D = 1.2, Room = "floor" },
                 new Prop { Kind = "chandelier", X = 0, Z = 9.5, Room = "floor" },
@@ -317,6 +334,15 @@ namespace Vig.Sim.Data
                 npc("watcher", 9.3, -5.2, N + 0.6, false, "back", "deadman"), npc("watcher", 12.6, -5.3, N - 0.5, false, "back", "deadman"),
             });
 
+            // floor 1's decorative roulette wheel (floor 2 plays a real one on that spot)
+            if (!two) props.Add(new Prop { Kind = "roulette", X = -6.5, Z = 4.5, W = 2.8, D = 1.5, Room = "floor" });
+            // the crowd watches the game that stands where theirs did
+            if (two)
+            {
+                var swap = new Dictionary<string, string> { { "twentyone", "craps" }, { "bandit", "roulette" }, { "hilo", "pegdrop" }, { "wheel", "hilo" }, { "redline", "crash" }, { "deadman", "redline" } };
+                foreach (var n in npcs) if (n.Table != null && swap.TryGetValue(n.Table, out var to)) n.Table = to;
+            }
+
             var walls = new List<Collider>();
             walls.AddRange(WallX(18, -14.2, 14.2, new Doorway[0], 5));
             walls.AddRange(WallX(-16, -14.2, 14.2, new Doorway[0], 3.6));
@@ -339,7 +365,7 @@ namespace Vig.Sim.Data
 
             return new Floor
             {
-                Id = 1, Rooms = rooms, Doorways = doorways, Ceiling = 5,
+                Id = id, Rooms = rooms, Doorways = doorways, Ceiling = 5,
                 Spawn = new V2(0, 16.6), SpawnYaw = 0,
                 DoorX = 0, DoorW = 2.4, DoorH = 3,
                 Colliders = cols.ToArray(), Tables = tables, Collector = collector,

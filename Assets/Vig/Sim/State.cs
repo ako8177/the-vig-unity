@@ -44,6 +44,11 @@ namespace Vig.Sim
         public int Drunk;
         public bool Run;
         public List<Buff> Buffs = new List<Buff>();
+        /// <summary>Hot Hand: the table of your current run of wins, and how long it is</summary>
+        public string HotTable;
+        public int HotRun;
+        /// <summary>Rabbit's Foot already spent this night</summary>
+        public bool FootUsed;
     }
 
     /// <summary>A card: rank 1 (ace) .. 13 (king), suit 0..3 (0, 1 red; 2, 3 black).</summary>
@@ -84,6 +89,35 @@ namespace Vig.Sim
         public List<HandResult> Hands21;
         public List<Card> Dealer21;
         public int? Streak;
+        /// <summary>Crash: the multiplier cashed at (or crashed at); Peg Drop: the ball's bounces (0 left, 1 right);
+        /// Roulette: the pocket; Craps: the point the roll was against</summary>
+        public double? Mult;
+        public bool? Crashed;
+        public List<int> Path;
+        public int? Pocket;
+        public int? Point;
+        /// <summary>the Bandit's progressive, when the whole grid took it</summary>
+        public int? Pot;
+    }
+
+    /// <summary>A Crash round in the air: when it took off, where it will crash, the auto cash-out.</summary>
+    public sealed class CrashRound
+    {
+        public int Start;
+        public double CrashAt;
+        /// <summary>auto cash-out multiplier (0: none)</summary>
+        public double Target;
+        public int Bet;
+        public int Player;
+    }
+
+    /// <summary>Let it ride (U16): a win's profit, on offer for double or nothing until the tick `Until`.</summary>
+    public sealed class Ride
+    {
+        public int Player;
+        public int Amount;
+        public int Until;
+        public int Count;
     }
 
     public sealed class PlayerHand21
@@ -115,6 +149,11 @@ namespace Vig.Sim
         public Hand21 Hand;
         /// <summary>Twenty-One's shoe: the cards left, as codes</summary>
         public List<int> Shoe;
+        /// <summary>Craps: the point (0: the come-out roll), and the stake riding on it</summary>
+        public int Point;
+        public int PointBet;
+        public CrashRound Crash;
+        public Ride Ride;
     }
 
     /// <summary>One lever under the Collector's table (DESIGN.md §6).</summary>
@@ -239,10 +278,27 @@ namespace Vig.Sim
         public NightSummary Summary;
         public Done Result;
         public RunStats Stats = new RunStats();
+        /// <summary>easy (+$200 a night) | house (x1.5 a night): U13</summary>
+        public string Curve;
+        /// <summary>the Bandit's progressive jackpot</summary>
+        public int Pot;
+        /// <summary>tonight's catalogue on the computer at home (U15)</summary>
+        public List<string> Shop = new List<string>();
 
         public const int TicksPerS = 60;
         public static readonly int NightTicks = Economy.NightS.I * TicksPerS;
-        public static readonly string[] TableIds = { "bandit", "twentyone", "hilo", "wheel", "redline", "deadman" };
+        public static readonly string[] TableIds = { "bandit", "twentyone", "hilo", "wheel", "redline", "deadman", "roulette", "craps", "pegdrop", "crash" };
+
+        /// <summary>The floor a night is on (three a floor).</summary>
+        public static int FloorOfNight(int night) => System.Math.Min(Economy.Floors.I, (night - 1) / Economy.NightsPerFloor.I + 1);
+
+        /// <summary>A night's quota on a curve, from night 1's: +$200 a night (easy) or x1.5 to the nearest $10 (house).</summary>
+        public static int QuotaFor(int night, string curve)
+        {
+            int q = Economy.Quota1.I;
+            for (int n = 1; n < night; n++) q = curve == "house" ? Js.RoundInt(q * Economy.QuotaGrowth.V / 10) * 10 : q + Economy.QuotaStep.I;
+            return q;
+        }
 
         public static Dictionary<string, TableState> NewTables() => TableIds.ToDictionary(id => id, id => new TableState());
 
@@ -263,15 +319,18 @@ namespace Vig.Sim
             p.Yaw = Js.Round(f.SpawnYaw * 1000);
         }
 
-        public static State New(int players, IEnumerable<string> upgrades, bool home, IEnumerable<string> unlocked)
+        public static State New(int players, IEnumerable<string> upgrades, bool home, IEnumerable<string> unlocked, string curve = "easy", int startFloor = 1)
         {
             var ups = upgrades.ToList();
+            int night = (System.Math.Max(1, System.Math.Min(Economy.Floors.I, startFloor)) - 1) * Economy.NightsPerFloor.I + 1;
             var s = new State
             {
-                Home = home, Floor = 1, Night = 1, Phase = home ? Sim.Phase.Home : Sim.Phase.Floor, PhaseAt = 0,
+                Home = home, Floor = FloorOfNight(night), Night = night, Phase = home ? Sim.Phase.Home : Sim.Phase.Floor, PhaseAt = 0,
                 Clock = NightTicks,
+                Curve = curve == "house" ? "house" : "easy",
+                Pot = Economy.PotSeed.I,
                 Bank = Economy.StartBank.I + (ups.Contains("bank500") ? 500 : 0),
-                Quota = Economy.Quota1.I,
+                Quota = QuotaFor(night, curve),
                 Markers = Economy.StartMarkers.I,
                 Players = new List<PlayerState>(),
                 Tables = NewTables(),

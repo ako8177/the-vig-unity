@@ -28,6 +28,10 @@ namespace Vig.Sim
         public bool Home;
         /// <summary>charms unlocked by killing Collectors in earlier runs (meta; DECISIONS #81)</summary>
         public IEnumerable<string> Unlocked = new string[0];
+        /// <summary>the quota curve: easy (+$200 a night, the default: U13) or house (x1.5)</summary>
+        public string Curve = "easy";
+        /// <summary>start on this floor (2: night 4, for testing the deeper games)</summary>
+        public int StartFloor = 1;
     }
 
     public sealed class Game
@@ -68,7 +72,8 @@ namespace Vig.Sim
         {
             Seed = opts.Seed;
             Rng = new Rng(Seed);
-            State = State.New(opts.Players, opts.Upgrades, opts.Home, opts.Unlocked);
+            State = State.New(opts.Players, opts.Upgrades, opts.Home, opts.Unlocked, opts.Curve, opts.StartFloor);
+            if (State.Home) Vig.Sim.Systems.HomeSystem.DrawShop(this);
         }
 
         /// <summary>Queue a command for the tick it names (a command for a past tick applies on the next one).</summary>
