@@ -44,16 +44,28 @@ namespace Vig.Client
             return kit;
         }
 
-        People(Transform parent)
+        /// <summary>the floor the crowd stands on (its layout's spots and tables)</summary>
+        public static int FloorId = 1;
+        static Floor F => Layout.FloorOf(FloorId);
+
+        People(Transform parent, NpcSpot[] spots, bool collector)
         {
             Root = new GameObject("People").transform;
             Root.SetParent(parent, false);
             Kit();
-            him = new Him(this, Layout.Floor1.Collector);
-            for (int i = 0; i < Layout.Floor1.Npcs.Length; i++) crowd.Add(new Person(this, Layout.Floor1.Npcs[i], i));
+            if (collector) him = new Him(this, F.Collector);
+            for (int i = 0; i < spots.Length; i++) crowd.Add(new Person(this, spots[i], i));
         }
 
-        public static People Build(Transform parent) => new People(parent);
+        /// <summary>A floor's crowd and its Collector.</summary>
+        public static People Build(Transform parent, int floor = 1)
+        {
+            FloorId = floor;
+            return new People(parent, Layout.FloorOf(floor).Npcs, true);
+        }
+
+        /// <summary>The family at the house (Home.Family): no Collector there.</summary>
+        public static People BuildFamily(Transform parent) => new People(parent, Home.Family, false);
 
         // ---------------------------------------------------------------- parts and materials
 
@@ -124,11 +136,11 @@ namespace Vig.Client
             Vector3? seatAt = null;
             if (seat != null)
             {
-                var pl = Layout.Floor1.TableOf(seat);
+                var pl = F.TableOf(seat);
                 if (pl != null) seatAt = RoomBuilder.U(pl.Stand.X, 0, pl.Stand.Z);
             }
             foreach (var p in crowd) p.Pose(dt, now, seat, seatAt, you);
-            him.Pose(g, dt, now);
+            him?.Pose(g, dt, now);
         }
 
         /// <summary>
@@ -151,13 +163,13 @@ namespace Vig.Client
                     var o = e.Outcome;
                     if (o == null) break;
                     int net = o.Ret - o.Bet;
-                    var pl = Layout.Floor1.TableOf(o.Table);
+                    var pl = F.TableOf(o.Table);
                     var at = pl != null ? RoomBuilder.U(pl.X, 0, pl.Z) : Vector3.zero;
                     React(o.Table, net > 0, net >= Feel.BigWin || net <= -Feel.BigWin, at);
                     break;
                 }
                 default:
-                    him.OnEvent(e, g);
+                    him?.OnEvent(e, g);
                     break;
             }
         }

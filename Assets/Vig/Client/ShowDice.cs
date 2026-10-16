@@ -1,6 +1,7 @@
 // Hi-Lo's die and Dead Man's two: rattled in the hand, thrown onto the baize, bouncing where the TS
 // game put the thuds (Beats.DiceBounces), tumbling onto the face the sim drew. Dead Man's second die
 // lands a beat after the first: the wait is the game. Snake eyes turn the pips blood red.
+using System.Linq;
 using UnityEngine;
 using Vig.Sim;
 using Vig.Sim.Data;
@@ -26,8 +27,43 @@ namespace Vig.Client
             Party = new Celebration(root, new Vector3(0, FeltY + 0.03f, 0.09f), FeltY, new Vector3(0, FeltY + 0.05f, -0.07f), Quaternion.Euler(38, 0, 0));
         }
 
+        DiceLab.Throw thr;
+        int thrKey = int.MinValue;
+
+        /// <summary>A real throw (DiceLab) from your side of the table, landing on the sim's faces.</summary>
+        DiceLab.Throw Get(System.Collections.Generic.List<int> faces, int key)
+        {
+            if (thr != null && thrKey == key) return thr;
+            float size = dice[0].Size, w = (float)Pl.W - 0.26f, d = (float)Pl.D - 0.26f;
+            DiceLab.Launch(dice.Length, size, d, key, two ? 0.95f : 0.8f, out var from, out var vel, out var spin);
+            thr = DiceLab.Simulate(size, w, d, 0.07f, from, vel, spin, faces.Take(dice.Length).ToArray());
+            thrKey = key;
+            Sfx.Dice(thr, Pl, two ? Feel.DeadmanS : Feel.DiceS);
+            return thr;
+        }
+
+        void PoseThrow(DiceLab.Throw th, float s)
+        {
+            for (int k = 0; k < dice.Length; k++)
+            {
+                th.Pose(k, s, out var pos, out var rot);
+                dice[k].T.localPosition = pos + new Vector3(0, FeltY + dice[k].Size / 2, 0);
+                dice[k].T.localRotation = rot;
+            }
+        }
+
         protected override void Animate(Game g, TableState t, Outcome o, bool live, float p, float since, float nowS)
         {
+            // real dice (U18): the throw is physics, the faces are the sim's
+            if (o?.Dice != null && o.Dice.Count >= dice.Length)
+            {
+                int key = (live ? t.Rounds : t.Rounds - 1) * 97 + o.Dice[0] * 7 + (two ? o.Dice[1] : 0) + (two ? 5000 : 0);
+                var th = Get(o.Dice, key);
+                PoseThrow(th, live ? p * th.Seconds / 0.97f : th.Seconds);
+                var pip0 = two && !live && o.LifeLost == true ? Props.PipBlood : Props.Pip;
+                foreach (var d in dice) d.PipColor(pip0);
+                return;
+            }
             float s = (float)(two ? Feel.DeadmanS : Feel.DiceS);
             for (int k = 0; k < dice.Length; k++)
             {

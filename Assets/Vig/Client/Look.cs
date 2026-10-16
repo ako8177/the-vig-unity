@@ -119,5 +119,15 @@ namespace Vig.Client
         public static Material Bulb => Glow("bulb", new Color(1f, 0.8f, 0.55f), 9f);
         public static Material Crystal => Glow("crystal", new Color(1f, 0.92f, 0.8f), 3.5f);
         public static Material Screen(string key, Color c) => Surface(key, Color.black, 0.9f, 0, emission: c);
+
+        // floor 2 (DESIGN.md §11): the Gold Room, the Mirror Room, the Furnace
+        public static Material CarpetDeco => Surface("carpetDeco", Color.white, 0.18f, 0, Textures.DecoCarpet(), Textures.FiberNormal(), 0.4f);
+        public static Material WallDeco => Surface("wallDeco", Color.white, 0.85f, 0, Textures.DecoWall());
+        public static Material WallMirror => Surface("wallMirror", new Color(0.32f, 0.36f, 0.4f), 0.96f, 1);
+        public static Material FloorMirror => Surface("floorMirror", new Color(0.05f, 0.05f, 0.07f), 0.9f, 0.3f, Textures.Marble());
+        public static Material WallBrick => Surface("wallBrick", Color.white, 0.2f, 0, Textures.Brick(), Textures.BrickNormal(), 0.8f);
+        public static Material FloorIron => Surface("floorIron", new Color(0.18f, 0.16f, 0.15f), 0.55f, 0.8f, Textures.Plaster(), Textures.PlasterNormal(), 0.8f);
+        public static Material Emerald => Surface("emerald", new Color(0.0f, 0.22f, 0.15f), 0.08f, 0, Textures.FeltNoise(), Textures.FeltNormal(), 0.4f);
+        public static Material Ember => Glow("ember", new Color(1f, 0.35f, 0.08f), 3f);
     }
 }

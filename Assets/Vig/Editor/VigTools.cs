@@ -306,6 +306,56 @@ namespace Vig.EditorTools
                     Run(play, 60 * 2);
                 },
             });
+
+            // ---- the house (U20)
+            var hs = Home.Spawn;
+            list.Add(new Shot
+            {
+                Name = "30_house_inside", Eye = U(hs.X - 0.8, 1.6, hs.Z + 0.4), At = U(Home.ComputerStand.X, 1.0, Home.ComputerStand.Z - 1.0), Hud = true,
+                Before = play => { play.NewRun(4242, true, 1, "easy"); Run(play, 30); },
+            });
+            list.Add(new Shot
+            {
+                Name = "31_house_yard", Eye = U(Home.HomeX - 6, 2.2, 13.5), At = U(Home.HomeX + 1, 1.2, 1.5),
+            });
+            list.Add(new Shot
+            {
+                Name = "32_catalogue", Eye = U(Home.ComputerStand.X, 1.6, Home.ComputerStand.Z + 0.4), At = U(Home.ComputerStand.X, 1.0, Home.ComputerStand.Z - 1.2), Hud = true,
+                Before = play =>
+                {
+                    var p = play.G.State.Players[0];
+                    p.X = Home.ComputerStand.X; p.Z = Home.ComputerStand.Z;
+                    play.Shop.Show(true);
+                    Run(play, 2);
+                },
+            });
+
+            // ---- floor 2 (DESIGN.md §11)
+            var f2 = Layout.Floor2;
+            list.Add(new Shot
+            {
+                Name = "33_floor2_door", Eye = U(0, 1.6, 16.6), At = U(0, 1.4, 6), Hud = true,
+                Before = play => { play.Shop.Show(false); play.NewRun(5151, false, 2, "easy"); Run(play, 20); },
+            });
+            list.Add(new Shot { Name = "34_gold_room_wide", Eye = U(11.5, 3.2, 16.5), At = U(-4, 0.6, 4) });
+            list.Add(new Shot { Name = "35_mirror_room", Eye = U(-8, 1.6, -2.6), At = U(-7, 1.2, -10) });
+            list.Add(new Shot { Name = "36_furnace", Eye = U(8, 1.6, -2.6), At = U(6.5, 1.2, -10) });
+            Shot Seated(string name, string table, int ticks, System.Action<Play> act)
+            {
+                var pl = f2.TableOf(table);
+                var eye = RoomBuilder.U(pl.Eye);
+                var shift = table == "pegdrop" ? new Vector3(0, 0.72f, 0) : table == "crash" ? new Vector3(0, 0.62f, 0.2f) : table == "craps" ? new Vector3(0, -0.15f, 0.35f) : Vector3.zero;
+                var at = RoomBuilder.U(pl.Look) + shift + Vector3.down * 0.32f;
+                return new Shot { Name = name, Eye = eye, At = at, Hud = true, Before = play => { SitAt(play, table); play.G.State.Bank = 6000; act(play); Run(play, ticks); } };
+            }
+            list.Add(Seated("37_roulette_spin", "roulette", 170, play => play.G.Submit(0, Command.CallIt("roulette", "red"))));
+            list.Add(Seated("38_roulette_landed", "roulette", 200, play => { }));
+            list.Add(Seated("39_craps_throw", "craps", 40, play => play.G.Submit(0, Command.Spin("craps"))));
+            list.Add(Seated("40_craps_rest", "craps", 160, play => { }));
+            list.Add(Seated("41_pegdrop_falling", "pegdrop", 90, play => play.G.Submit(0, Command.Spin("pegdrop"))));
+            list.Add(Seated("42_pegdrop_landed", "pegdrop", 140, play => { }));
+            list.Add(Seated("43_crash_climbing", "crash", 150, play => play.G.Submit(0, Command.Spin("crash"))));
+            list.Add(Seated("44_crash_after", "crash", 900, play => { }));
             return list;
         }
 
@@ -367,7 +417,7 @@ namespace Vig.EditorTools
             var g = play.G;
             var p = g.State.Players[0];
             if (p.Seat != null) { g.Submit(0, Command.Stand()); Run(play, 1); }
-            var pl = Layout.Floor1.TableOf(table);
+            var pl = Layout.FloorOf(g.State.Floor).TableOf(table);
             p.X = pl.Stand.X; p.Z = pl.Stand.Z;
             g.Submit(0, Command.Sit(table));
             Run(play, 1);
@@ -393,11 +443,14 @@ namespace Vig.EditorTools
                 s.Before?.Invoke(play);
                 play.Hud.Banner("", Color.clear, 0);
                 play.Refresh();
-                var canvas = play.Hud.Canvas;
-                canvas.renderMode = s.Hud ? RenderMode.ScreenSpaceCamera : RenderMode.ScreenSpaceOverlay;
-                canvas.worldCamera = cam;
-                canvas.planeDistance = 0.2f;
-                canvas.enabled = s.Hud;
+                foreach (var canvas in UnityEngine.Object.FindObjectsByType<Canvas>(FindObjectsSortMode.None))
+                {
+                    if (canvas.renderMode == RenderMode.WorldSpace || canvas.transform.parent != null) continue;
+                    canvas.renderMode = s.Hud ? RenderMode.ScreenSpaceCamera : RenderMode.ScreenSpaceOverlay;
+                    canvas.worldCamera = cam;
+                    canvas.planeDistance = 0.2f - canvas.sortingOrder * 0.002f;
+                    if (canvas == play.Hud.Canvas) canvas.enabled = s.Hud;
+                }
                 play.Hud.Refresh(play.G, 0);
                 cam.transform.position = s.Eye;
                 cam.transform.rotation = Quaternion.LookRotation(s.At - s.Eye);

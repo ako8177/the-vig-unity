@@ -58,12 +58,16 @@ namespace Vig.Client
         {
             Id = id;
             Root = root;
-            Pl = Layout.Floor1.TableOf(id);
+            Pl = Layout.FloorOf(FloorId).TableOf(id);
             FeltY = (float)Pl.H + 0.01f;
         }
 
+        /// <summary>the floor whose tables are being built</summary>
+        public static int FloorId = 1;
+
         public static Dictionary<string, TableShow> Build(RoomBuilder room)
         {
+            FloorId = room.FloorId;
             var d = new Dictionary<string, TableShow>();
             foreach (var kv in room.Tables)
             {
@@ -75,6 +79,10 @@ namespace Vig.Client
                     case "twentyone": s = new TwentyOneShow(kv.Value); break;
                     case "wheel": s = new WheelShow(kv.Value); break;
                     case "bandit": s = new BanditShow(kv.Value); break;
+                    case "roulette": s = new RouletteShow(kv.Value); break;
+                    case "craps": s = new CrapsShow(kv.Value); break;
+                    case "pegdrop": s = new PegShow(kv.Value); break;
+                    case "crash": s = new CrashShow(kv.Value); break;
                     default: continue;
                 }
                 d[kv.Key] = s;

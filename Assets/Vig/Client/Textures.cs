@@ -259,6 +259,60 @@ namespace Vig.Client
             return c;
         });
 
+        /// <summary>THE GOLD ROOM (floor 2): a black carpet of gold art-deco fans.</summary>
+        public static Texture2D DecoCarpet() => Make("decoCarpet", 1024, (u, v) =>
+        {
+            float n = Fbm(u, v, 64, 121, 3);
+            var c = Mix(new Color(0.03f, 0.025f, 0.03f), new Color(0.07f, 0.05f, 0.05f), n);
+            // fans: concentric arcs in a staggered grid
+            float gu = Frac(u * 4 + (Mathf.Floor(v * 4) % 2) * 0.5f), gv = Frac(v * 4);
+            float r = Mathf.Sqrt((gu - 0.5f) * (gu - 0.5f) + gv * gv);
+            float arcs = Mathf.Abs(Frac(r * 6) - 0.5f);
+            if (r < 0.95f) c = Mix(c, Look.Gold * 0.55f, Mathf.Clamp01((0.06f - arcs) / 0.03f) * (1 - r));
+            float ray = Mathf.Abs(Frac(Mathf.Atan2(gv, gu - 0.5f) / Mathf.PI * 9) - 0.5f);
+            if (r < 0.9f && r > 0.2f) c = Mix(c, Look.Gold * 0.4f, Mathf.Clamp01((0.05f - ray) / 0.03f) * 0.6f);
+            c = Mix(c, new Color(0.0f, 0.25f, 0.18f), Band(r, 0.12f, 0.02f) * 0.8f);
+            c *= 0.85f + 0.3f * Hash((int)(u * 1024), (int)(v * 1024), 122);
+            c.a = 1;
+            return c;
+        });
+
+        /// <summary>THE GOLD ROOM: black lacquer panels with gold deco lines.</summary>
+        public static Texture2D DecoWall() => Make("decoWall", 512, (u, v) =>
+        {
+            float x = Frac(u * 2), y = Frac(v * 1.2f);
+            var c = new Color(0.03f, 0.03f, 0.035f);
+            float frame = Mathf.Min(Mathf.Min(x, 1 - x), Mathf.Min(y, 1 - y));
+            c = Mix(c, Look.Gold * 0.7f, Band(frame, 0.05f, 0.008f));
+            // a stepped chevron in each panel
+            float ch = Mathf.Abs(x - 0.5f) + (1 - y) * 0.6f;
+            c = Mix(c, Look.Gold * 0.6f, Band(Frac(ch * 4), 0.5f, 0.03f) * (frame > 0.07f ? 1 : 0) * 0.7f);
+            c.a = 1;
+            return c;
+        });
+
+        /// <summary>THE FURNACE: soot-black brick, the mortar glowing faintly.</summary>
+        static float BrickH(float u, float v)
+        {
+            float row = Mathf.Floor(v * 16);
+            float bx = Frac(u * 8 + (row % 2) * 0.5f), by = Frac(v * 16);
+            float edge = Mathf.Min(Mathf.Min(bx, 1 - bx) * 4, Mathf.Min(by, 1 - by) * 2);
+            return Mathf.Clamp01(edge * 3) * (0.8f + 0.2f * Fbm(u, v, 32, 131, 2));
+        }
+
+        public static Texture2D Brick() => Make("brick", 1024, (u, v) =>
+        {
+            float h = BrickH(u, v);
+            float row = Mathf.Floor(v * 16), col = Mathf.Floor(u * 8 + (row % 2) * 0.5f);
+            float tone = 0.6f + 0.6f * Hash((int)col, (int)row, 133);
+            var c = new Color(0.16f, 0.07f, 0.05f) * tone * (0.7f + 0.3f * Fbm(u, v, 16, 134, 3));
+            c = Mix(new Color(0.35f, 0.12f, 0.04f), c, Mathf.Clamp01(h * 1.5f));
+            c.a = 1;
+            return c;
+        });
+
+        public static Texture2D BrickNormal() => NormalFrom("brickN", 512, BrickH, 4f);
+
         /// <summary>Black marble with gold veins: the bar top.</summary>
         public static Texture2D Marble() => Make("marble", 512, (u, v) =>
         {

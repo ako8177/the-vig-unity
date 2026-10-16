@@ -11,7 +11,7 @@ namespace Vig.Client
 {
     public sealed class Hud
     {
-        readonly TextMeshProUGUI clock, money, status, prompt, toasts, banner, help;
+        readonly TextMeshProUGUI clock, money, status, prompt, toasts, banner, help, charms;
         readonly List<(string text, float until)> lines = new List<(string, float)>();
         float bannerUntil;
         public readonly Canvas Canvas;
@@ -24,6 +24,7 @@ namespace Vig.Client
             Ui.Panel("top shade", c, new Color(0, 0, 0, 0.35f), new Vector2(0, 1), new Vector2(1, 1), new Vector2(0, -96), Vector2.zero);
             clock = Ui.Text("clock", c, "", 52, Color.white, TextAlignmentOptions.TopLeft, tl, tl, new Vector2(36, -88), new Vector2(260, -14), true);
             money = Ui.Text("money", c, "", 30, Look.Brass, TextAlignmentOptions.TopLeft, tl, tl, new Vector2(250, -80), new Vector2(1100, -20), true);
+            charms = Ui.Text("charms", c, "", 19, new Color(0.75f, 0.8f, 1f), TextAlignmentOptions.TopRight, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-1100, -130), new Vector2(-36, -88));
             status = Ui.Text("status", c, "", 26, Color.white, TextAlignmentOptions.TopRight, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-900, -84), new Vector2(-36, -20), true);
             prompt = Ui.Text("prompt", c, "", 30, Color.white, TextAlignmentOptions.Center, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(-700, 150), new Vector2(700, 230), true);
             toasts = Ui.Text("toasts", c, "", 26, Color.white, TextAlignmentOptions.BottomLeft, new Vector2(0, 0), new Vector2(0, 0), new Vector2(36, 36), new Vector2(1100, 420));
@@ -34,6 +35,13 @@ namespace Vig.Client
 
         public void Toast(string text, float secs = 4f) => lines.Add((text, Time.time + secs));
 
+        public void Clear()
+        {
+            lines.Clear();
+            banner.text = "";
+            toasts.text = "";
+        }
+
         public void Banner(string text, Color c, float secs = 2.5f)
         {
             banner.text = Ui.Col(text, c);
@@ -42,6 +50,14 @@ namespace Vig.Client
 
         public void Prompt(string text) => prompt.text = text ?? "";
 
+        /// <summary>The table bar is up: the toasts and the prompt sit above it.</summary>
+        public void BarUp(bool up)
+        {
+            float y = up ? 270 : 0;
+            toasts.rectTransform.offsetMin = new Vector2(36, 36 + y);
+            toasts.rectTransform.offsetMax = new Vector2(1100, 420 + y);
+        }
+
         public void Refresh(Game g, int me)
         {
             var s = g.State;
@@ -49,7 +65,8 @@ namespace Vig.Client
             int secs = s.Clock / State.TicksPerS;
             clock.text = s.Phase == Phase.Floor ? $"{secs / 60}:{secs % 60:00}" : s.Phase == Phase.Midnight || s.Phase == Phase.Choice || s.Phase == Phase.Circuit || s.Phase == Phase.Wheel ? Ui.Col("0:00", Look.Coll) : "";
             Color bc = s.Bank >= s.Quota ? Look.LowHi : Look.Brass;
-            money.text = $"{Ui.Col(Ui.Money(s.Bank), bc)} {Ui.Col("/ " + Ui.Money(s.Quota), Look.Smoke)}    {Ui.Col("NIGHT " + s.Night, Look.Bone)}";
+            money.text = $"{Ui.Col(Ui.Money(s.Bank), bc)} {Ui.Col("/ " + Ui.Money(s.Quota), Look.Smoke)}    {Ui.Col("NIGHT " + s.Night, Look.Bone)}  {Ui.Col("FLOOR " + s.Floor, Look.Gold)}";
+            charms.text = p.Charms.Count == 0 ? "" : string.Join("  ·  ", p.Charms.Select(c => Charms.ById(c)?.Name.ToUpperInvariant()));
             string hearts = string.Concat(Enumerable.Range(0, Mathf.Max(p.Lives, 0)).Select(_ => "♥"));
             var marks = s.Marks.Where(m => m.Player == -1 || m.Player == me).Select(m => Ui.Col(Marks.ById(m.Id).Name.ToUpperInvariant() + (m.Stacks > 1 ? " x" + m.Stacks : "") + $" {Mathf.CeilToInt(m.Left / 60f)}s", Look.Blood));
             status.text = $"{string.Join("  ", marks)}    {Ui.Col(s.Markers + " MARKERS", Look.Marker)}    {(p.Ghost ? Ui.Col("GHOST", Look.Soul) : Ui.Col(hearts, Look.Blood))}";

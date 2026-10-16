@@ -27,16 +27,21 @@ namespace Vig.Client
         public readonly List<Light> RoomLights = new List<Light>();
         int shadowed;
 
-        RoomBuilder(Transform parent)
+        /// <summary>which floor this is (1: the slice's; 2: the Gold Room, the Mirror Room, the Furnace)</summary>
+        public readonly int FloorId;
+        bool Two => FloorId >= 2;
+
+        RoomBuilder(Transform parent, int floor)
         {
-            Root = new GameObject("Floor 1").transform;
+            FloorId = floor;
+            Root = new GameObject("Floor " + floor).transform;
             Root.SetParent(parent, false);
         }
 
-        public static RoomBuilder Build(Transform parent = null)
+        public static RoomBuilder Build(Transform parent = null, int floor = 1)
         {
-            var b = new RoomBuilder(parent);
-            var f = Layout.Floor1;
+            var b = new RoomBuilder(parent, floor);
+            var f = Layout.FloorOf(floor);
             b.Rooms(f);
             foreach (var t in f.Tables) b.GameTable(t);
             b.CollectorTable(f.Collector);
@@ -143,8 +148,10 @@ namespace Vig.Client
                 float z0 = (float)(r.Z0 <= -15.9 ? -15.8 : r.Z0 == -2 ? -1.8 : r.Z0), z1 = (float)(r.Z1 >= 17.9 ? 17.8 : r.Z1 == -2 ? -2.2 : r.Z1);
                 float w = x1 - x0, d = z1 - z0, h = (float)r.Ceiling;
                 var center = U((x0 + x1) / 2, 0, (z0 + z1) / 2);
-                Material floorMat = r.Id == "floor" ? Look.CarpetFloor : r.Id == "lounge" ? Look.CarpetLounge : Look.Planks;
-                Material wallMat = r.Id == "floor" ? Look.WallFloor : r.Id == "lounge" ? Look.WallLounge : Look.WallBack;
+                Material floorMat = Two ? (r.Id == "floor" ? Look.CarpetDeco : r.Id == "lounge" ? Look.FloorMirror : Look.FloorIron)
+                    : r.Id == "floor" ? Look.CarpetFloor : r.Id == "lounge" ? Look.CarpetLounge : Look.Planks;
+                Material wallMat = Two ? (r.Id == "floor" ? Look.WallDeco : r.Id == "lounge" ? Look.WallMirror : Look.WallBrick)
+                    : r.Id == "floor" ? Look.WallFloor : r.Id == "lounge" ? Look.WallLounge : Look.WallBack;
                 float tile = r.Id == "floor" ? 1 / 3.2f : r.Id == "lounge" ? 1 / 2.4f : 1 / 3.6f;
                 Part("floor", MeshKit.RoundedBox(w, 0.1f, d, 0.001f, 1, tile), floorMat, center + Vector3.down * 0.05f, null, g, false);
                 Part("ceiling", MeshKit.RoundedBox(w, 0.1f, d, 0.001f, 1, r.Id == "floor" ? 1 / 2.5f : 1), r.Id == "floor" ? Look.CeilingFloor : Look.Ceiling, center + Vector3.up * (h + 0.05f), null, g, false);
@@ -205,7 +212,8 @@ namespace Vig.Client
         void RoomLighting(Transform g, Room r, float x0, float x1, float z0, float z1, float h)
         {
             // a cove of warm light round the ceiling's edge: the room's ambient, made by light, not a fill
-            Color cove = r.Id == "floor" ? new Color(1f, 0.62f, 0.38f) : r.Id == "lounge" ? new Color(0.78f, 0.32f, 1f) : new Color(1f, 0.35f, 0.18f);
+            Color cove = Two ? (r.Id == "floor" ? new Color(1f, 0.75f, 0.35f) : r.Id == "lounge" ? new Color(0.3f, 0.85f, 0.9f) : new Color(1f, 0.3f, 0.08f))
+                : r.Id == "floor" ? new Color(1f, 0.62f, 0.38f) : r.Id == "lounge" ? new Color(0.78f, 0.32f, 1f) : new Color(1f, 0.35f, 0.18f);
             float inten = r.Id == "floor" ? 7f : r.Id == "lounge" ? 6f : 3f;
             float step = r.Id == "floor" ? 7f : 6.5f;
             for (float x = x0 + step / 2; x < x1; x += step)
@@ -228,7 +236,8 @@ namespace Vig.Client
             var ring = new List<Vector3> { U(x0 + 0.15f, h - 0.22f, z0 + 0.15f), U(x1 - 0.15f, h - 0.22f, z0 + 0.15f), U(x1 - 0.15f, h - 0.22f, z1 - 0.15f), U(x0 + 0.15f, h - 0.22f, z1 - 0.15f) };
             var strip = new List<Vector3>();
             for (int i = 0; i < 4; i++) { var a = ring[i]; var b = ring[(i + 1) % 4]; for (int k = 0; k < 8; k++) strip.Add(Vector3.Lerp(a, b, k / 8f)); }
-            Color tube = r.Id == "floor" ? Look.PinkHi : r.Id == "lounge" ? Look.Coll : Look.High;
+            Color tube = Two ? (r.Id == "floor" ? Look.Gold : r.Id == "lounge" ? Look.Soul : new Color(1f, 0.45f, 0.1f))
+                : r.Id == "floor" ? Look.PinkHi : r.Id == "lounge" ? Look.Coll : Look.High;
             Part("cove neon", MeshKit.Tube(strip, 0.018f, 6, true), Look.Neon(tube, r.Id == "back" ? 2.5f : 3.5f), Vector3.zero, null, g, false);
         }
 
@@ -241,7 +250,7 @@ namespace Vig.Client
             Part("jamb", Box(0.18f, h, 0.56f, 0.03f), Look.Lacquer, new Vector3(w / 2 + 0.09f, h / 2, 0), null, g);
             Part("head", Box(w + 0.36f, 0.22f, 0.56f, 0.03f), Look.Lacquer, new Vector3(0, h + 0.11f, 0), null, g);
             // the wall over the arch, up to the main floor's ceiling
-            float top = (float)Layout.Floor1.Ceiling;
+            float top = (float)Layout.FloorOf(FloorId).Ceiling;
             Part("lintel", MeshKit.RoundedBox(w, top - h, 0.4f, 0.001f), Look.Ceiling, new Vector3(0, h + (top - h) / 2, 0), null, g);
             string tier = dw.To == "lounge" ? Vig.Sim.Data.Tier.Mid : Vig.Sim.Data.Tier.High;
             // the sign faces the main floor (south in the sim: -Z in Unity)
@@ -257,15 +266,31 @@ namespace Vig.Client
             var g = Group(def.Name, U(t.X, 0, t.Z));
             Tables[t.Table] = g;
             float w = (float)t.W, d = (float)t.D, h = (float)t.H;
-            if (t.Cabinet) SlotCabinet(g, w, d, tierColor, true, def.Sign);
+            if (t.Table == "pegdrop") PegCabinet(g, w, d, tierColor, def.Sign);
+            else if (t.Cabinet) SlotCabinet(g, w, d, tierColor, true, def.Sign);
             else
             {
-                FeltTable(g, w, d, h, tierColor, t.Table == "hilo" || t.Table == "deadman" ? Look.BaizeMat : Look.Felt);
+                var felt = t.Table == "hilo" || t.Table == "deadman" ? Look.BaizeMat : t.Table == "roulette" || t.Table == "craps" ? Look.Emerald : Look.Felt;
+                FeltTable(g, w, d, h, tierColor, felt);
+                // craps: the high walls the dice bounce off
+                if (t.Table == "craps")
+                {
+                    var wall = MeshKit.RoundRect(w - 0.18f, d - 0.18f, 0.18f, 8).Select(p => new Vector3(p.x, 0, p.y)).ToList();
+                    Part("craps wall", MeshKit.Tube(wall, 0.035f, 8, true), Look.Lacquer, new Vector3(0, h + 0.12f, 0), null, g);
+                    Part("craps wall inner", MeshKit.Tube(wall, 0.03f, 8, true), Look.Lacquer, new Vector3(0, h + 0.06f, 0), null, g);
+                }
+                // Crash: a tall monitor behind the dealer's side shows the climb
+                if (t.Table == "crash")
+                {
+                    Part("crash monitor", Box(1.7f, 1.0f, 0.08f, 0.03f), Look.BlackGloss, new Vector3(0, h + 1.1f, d / 2 + 0.05f), null, g);
+                    Part("crash post", MeshKit.Lathe(new[] { P(0.06f, 0), P(0.06f, h + 0.62f) }, 16, false, true), Look.Chrome, new Vector3(0, 0, d / 2 + 0.12f), null, g);
+                }
                 // the stool where you sit, at the stand point
                 Stool(Group("stool", U(t.Stand.X, 0, t.Stand.Z) - g.position, 0, g));
                 // the sign hangs behind the dealer's side, facing the seat
                 Neon.Sign(g, def.Sign, tierColor, new Vector3(0, (float)t.SignY + (def.Tier == "low" ? 0 : 0.12f), d / 2 + 0.35f), 0, 0.42f, this, frame: true);
-                Pendant(g, new Vector3(0, def.Tier == "high" ? 2.05f : def.Tier == "mid" ? 2.1f : 2.7f, 0), def.Tier);
+                if (t.Table == "crash") AddLight("crash wash", LightType.Spot, new Color(1f, 0.6f, 0.4f), 14f, 6f, new Vector3(0, 3.4f, -0.6f), g, true, 70, Vector3.down);
+                else Pendant(g, new Vector3(0, def.Tier == "high" ? 2.05f : def.Tier == "mid" ? 2.1f : 2.7f, 0), def.Tier);
             }
             if (t.Screen != null)
             {
@@ -323,6 +348,19 @@ namespace Vig.Client
             var seat = Cached("stoolSeat", () => MeshKit.Lathe(new[] { P(0, 0.62f), P(0.2f, 0.62f), P(0.21f, 0.66f), P(0.2f, 0.7f), P(0.12f, 0.72f), P(0, 0.725f) }, 28, false, false));
             Part("stool seat", seat, Look.Velvet, Vector3.zero, null, g);
             Part("foot ring", MeshKit.Tube(MeshKit.Circle(0.17f, 24, 0.28f), 0.012f, 6, true), Look.BrassMat, Vector3.zero, null, g);
+        }
+
+        /// <summary>Peg Drop's cabinet: the screen low, the board above it (the show hangs the pegs and the ball on it).</summary>
+        void PegCabinet(Transform g, float w, float d, Color tier, string sign)
+        {
+            float bw = Mathf.Min(1.5f, w), bd = Mathf.Min(0.8f, d);
+            Part("plinth", Box(bw + 0.04f, 0.32f, bd + 0.04f, 0.03f), Look.BlackGloss, new Vector3(0, 0.16f, 0), null, g);
+            Part("body", Box(bw, 1.5f, bd, 0.08f), Look.Surface("pegBody", new Color(0.1f, 0.02f, 0.14f), 0.85f), new Vector3(0, 1.05f, 0), null, g);
+            Part("board", Box(bw + 0.06f, 1.35f, 0.12f, 0.06f), Look.BlackGloss, new Vector3(0, 2.45f, -bd / 2 + 0.1f), null, g);
+            Part("board face", MeshKit.Quad(bw - 0.1f, 1.22f), Look.Screen("pegFace", new Color(0.02f, 0.01f, 0.05f)), new Vector3(0, 2.45f, -bd / 2 + 0.035f), null, g, false);
+            Part("board neon", MeshKit.Tube(MeshKit.RoundRect(bw, 1.3f, 0.12f), 0.011f, 6, true), Look.Neon(tier, 4f), new Vector3(0, 2.45f, -bd / 2 + 0.03f), null, g, false);
+            Part("chaser bulbs", Bulbs(MeshKit.RoundRect(bw - 0.1f, 0.86f, 0.08f), 0.075f, 0.011f), Look.Glow("chaser", new Color(1f, 0.78f, 0.45f), 2.6f), new Vector3(0, 1.3f, -bd / 2 - 0.006f), null, g, false);
+            if (sign != null) Neon.Sign(g, sign, tier, new Vector3(0, 3.33f, -bd / 2 + 0.05f), 0, 0.22f, this, frame: true);
         }
 
         /// <summary>A slot cabinet facing south (toward -Z in Unity): plinth, gloss body, the screen, a topper in neon, a lever.</summary>
@@ -391,7 +429,7 @@ namespace Vig.Client
             Part("violet neon", MeshKit.Tube(MeshKit.Circle(r + 0.005f, 72, 0), 0.01f, 6, true), Look.Neon(Look.Coll, 6f), new Vector3(0, h - 0.06f, 0), null, g, false);
             AddLight("collector glow", LightType.Point, Look.Coll, 1.2f, 2.5f, new Vector3(0, 0.3f, 0), g);
             // his chair: a high back of purple velvet in a black frame, across the table (north of it)
-            var ch = Layout.Floor1.Collector.Chair;
+            var ch = Layout.FloorOf(FloorId).Collector.Chair;
             var chair = Group("his chair", U((ch.X0 + ch.X1) / 2, 0, (ch.Z0 + ch.Z1) / 2) - g.position, 180, g);
             Part("seat", Box(0.9f, 0.14f, 0.7f, 0.05f), Look.VelvetPurple, new Vector3(0, 0.5f, 0.1f), null, chair);
             Part("back", Box(1.0f, 2.0f, 0.18f, 0.07f), Look.VelvetPurple, new Vector3(0, 1.55f, -0.18f), null, chair);
@@ -637,7 +675,7 @@ namespace Vig.Client
             }
             Part("frame", Box(w + 0.3f, 0.2f, 0.2f, 0.03f), Look.BrassMat, new Vector3(0, h + 0.1f, 0), null, g);
             Part("runner", MeshKit.RoundedBox(2.2f, 0.012f, 16f, 0.004f, 1, 1), Look.Velvet, U(0, 0.006, 9.8), null, null, false);
-            Neon.Sign(g, "THE VIG", Look.PinkHi, new Vector3(0, h + 0.75f, -0.1f), 180, 0.7f, this, frame: true);
+            Neon.Sign(g, Two ? "FLOOR 2" : "THE VIG", Two ? Look.Gold : Look.PinkHi, new Vector3(0, h + 0.75f, -0.1f), 180, 0.7f, this, frame: true);
         }
 
         void Probes(Floor f)

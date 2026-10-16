@@ -101,7 +101,7 @@ namespace Vig.Client
         // ---------------------------------------------------------------- dice
 
         /// <summary>A die's face normals: 1 and 6, 2 and 5, 3 and 4 opposite (they sum to 7).</summary>
-        static readonly Vector3[] FaceN = { Vector3.zero, Vector3.up, Vector3.right, Vector3.forward, Vector3.back, Vector3.left, Vector3.down };
+        public static readonly Vector3[] FaceN = { Vector3.zero, Vector3.up, Vector3.right, Vector3.forward, Vector3.back, Vector3.left, Vector3.down };
         static readonly int[][] PipsOf =
         {
             new int[0], new[] { 1, 1 }, new[] { 0, 0, 2, 2 }, new[] { 0, 0, 1, 1, 2, 2 }, new[] { 0, 0, 2, 0, 0, 2, 2, 2 },

@@ -123,7 +123,8 @@ namespace Vig.Client
                 return $"<size=24>{sb}</size>";
             }
             if (t.Pending != null)
-                return Ui.Col(Id == "bandit" ? "THE REELS SPIN..." : Id == "wheel" ? "THE WHEEL TURNS..." : Id == "redline" || Id == "twentyone" ? "THE CARD TURNS..." : "THE DICE ROLL...", Look.Smoke);
+                return Ui.Col(Id == "bandit" ? "THE REELS SPIN..." : Id == "wheel" ? "THE WHEEL TURNS..." : Id == "redline" || Id == "twentyone" ? "THE CARD TURNS..."
+                    : Id == "roulette" ? "THE BALL RUNS..." : Id == "pegdrop" ? "THE BALL DROPS..." : Id == "crash" ? "..." : "THE DICE ROLL...", Look.Smoke);
             var o = t.Last;
             if (o == null) return Ui.Col("PLACE YOUR BET", Look.Smoke);
             Color c = o.Win ? Look.LowHi : o.LifeLost == true ? Look.Blood : Look.Bone;
