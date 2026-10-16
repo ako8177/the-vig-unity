@@ -105,7 +105,7 @@ namespace Vig.EditorTools
 
         static Vector3 U(double x, double y, double z) => RoomBuilder.U(x, y, z);
 
-        static List<Shot> Shots()
+        static List<Shot> Shots(Play play0)
         {
             var f = Layout.Floor1;
             var list = new List<Shot>
@@ -117,11 +117,24 @@ namespace Vig.EditorTools
                 new Shot { Name = "05_lounge", Eye = U(-8, 1.6, -2.6), At = U(-7, 1.0, -10) },
                 new Shot { Name = "06_back_room", Eye = U(8, 1.6, -2.6), At = U(6.5, 1.0, -10) },
                 new Shot { Name = "07_twentyone", Eye = U(4.6, 1.6, 8.2), At = U(6.5, 1.0, 5) },
+                // the Collector in his chair, from beside his stool, before midnight (the people: U13)
+                new Shot { Name = "28_collector_floor", Eye = U(f.Collector.Stand.X + 1.1, 1.6, f.Collector.Stand.Z + 0.4), At = U(f.Collector.X, 1.25, f.Collector.Z - 1.9) },
             };
             var hilo = f.TableOf("hilo");
+            Shot Seat(string name, string table, Action<Play> before, bool hud = false)
+            {
+                var pl = f.TableOf(table);
+                return new Shot { Name = name, Eye = RoomBuilder.U(pl.Eye), At = play0.SeatedLook(pl), Hud = hud, Before = before };
+            }
+            // Hi-Lo: the die in the air, at rest after a loss, and a win's celebration
+            list.Add(Seat("16_hilo_throw", "hilo", play =>
+            {
+                SitAt(play, "hilo");
+                Roll(play, "hilo", Command.CallIt("hilo", "hi"), 0.42f);
+            }));
             list.Add(new Shot
             {
-                Name = "08_hilo_seated", Eye = RoomBuilder.U(hilo.Eye), At = RoomBuilder.U(hilo.Look), Hud = true,
+                Name = "08_hilo_seated", Eye = RoomBuilder.U(hilo.Eye), At = play0.SeatedLook(hilo), Hud = true,
                 Before = play =>
                 {
                     var g = play.G;
@@ -138,24 +151,29 @@ namespace Vig.EditorTools
                     }
                 },
             });
-            var bandit = f.TableOf("bandit");
-            list.Add(new Shot
+            list.Add(Seat("17_hilo_win", "hilo", play => Until(play, "hilo", () => Command.CallIt("hilo", "hi"), o => o.Win, 0.3f)));
+            // the Bandit: the first reel locked and two still rolling; a paying grid outlined
+            list.Add(Seat("18_bandit_rolling", "bandit", play =>
             {
-                Name = "09_bandit_seated", Eye = RoomBuilder.U(bandit.Eye), At = RoomBuilder.U(bandit.Look),
-                Before = play =>
-                {
-                    SitAt(play, "bandit");
-                    play.G.Submit(0, Command.Spin("bandit"));
-                    Run(play, 200);
-                },
-            });
+                SitAt(play, "bandit");
+                Roll(play, "bandit", Command.Spin("bandit"), 0.56f);
+            }));
+            list.Add(Seat("09_bandit_seated", "bandit", play => Until(play, "bandit", () => Command.Spin("bandit"), o => o.Win, 0.6f)));
             var t21 = f.TableOf("twentyone");
+            // Twenty-One: cards coming out of the shoe, the hand in play, and the hand settled
+            list.Add(Seat("19_twentyone_deal", "twentyone", play =>
+            {
+                SitAt(play, "twentyone");
+                Topup(play.G);
+                play.G.Submit(0, Command.Bet("twentyone"));
+                Run(play, (int)(Feel.DealGap * 60 * 1.75));
+            }));
             list.Add(new Shot
             {
-                Name = "10_twentyone_hand", Eye = RoomBuilder.U(t21.Eye), At = RoomBuilder.U(t21.Look), Hud = true,
+                Name = "10_twentyone_hand", Eye = RoomBuilder.U(t21.Eye), At = play0.SeatedLook(t21), Hud = true,
                 Before = play =>
                 {
-                    SitAt(play, "twentyone");
+                    Run(play, 120);
                     // deal until a hand is in play (a natural settles at once)
                     for (int i = 0; i < 10 && play.G.State.Tables["twentyone"].Hand?.Stage != "play"; i++)
                     {
@@ -164,14 +182,31 @@ namespace Vig.EditorTools
                     }
                 },
             });
+            list.Add(Seat("20_twentyone_settled", "twentyone", play =>
+            {
+                if (play.G.State.Tables["twentyone"].Hand?.Stage == "play") play.G.Submit(0, Command.CallIt("twentyone", "stand"));
+                Run(play, 1);
+                Settle(play, "twentyone", 0.4f);
+            }, true));
             var red = f.TableOf("redline");
+            // Red Line: the riffle, the flip, and the third loss in a row
+            list.Add(Seat("21_redline_shuffle", "redline", play =>
+            {
+                SitAt(play, "redline");
+                Roll(play, "redline", Command.CallIt("redline", "red"), 0.24f);
+            }));
+            list.Add(Seat("22_redline_flip", "redline", play =>
+            {
+                Settle(play, "redline", 0.2f);
+                Roll(play, "redline", Command.CallIt("redline", "black"), 0.75f);
+            }));
             list.Add(new Shot
             {
-                Name = "11_redline_third_loss", Eye = RoomBuilder.U(red.Eye), At = RoomBuilder.U(red.Look), Hud = true,
+                Name = "11_redline_third_loss", Eye = RoomBuilder.U(red.Eye), At = play0.SeatedLook(red), Hud = true,
                 Before = play =>
                 {
                     var g = play.G;
-                    if (g.State.Tables["twentyone"].Hand?.Stage == "play") { g.Submit(0, Command.CallIt("twentyone", "stand")); Run(play, 300); }
+                    Settle(play, "redline", 0);
                     SitAt(play, "redline");
                     // play red until three in a row lose and the life goes (the bank is topped up: a debug step, like the TS skipTo)
                     for (int i = 0; i < 80; i++)
@@ -183,6 +218,21 @@ namespace Vig.EditorTools
                     }
                 },
             });
+            // the Wheel of Marks: turning, and landed with its lamps flashing
+            list.Add(Seat("23_wheel_spin", "wheel", play =>
+            {
+                SitAt(play, "wheel");
+                Roll(play, "wheel", Command.Spin("wheel"), 0.5f);
+            }));
+            list.Add(Seat("24_wheel_landed", "wheel", play => Settle(play, "wheel", 0.35f), true));
+            // Dead Man's Hand: one die down and the second in the air; a big win; a jackpot
+            list.Add(Seat("25_deadman_second", "deadman", play =>
+            {
+                SitAt(play, "deadman");
+                Roll(play, "deadman", Command.Spin("deadman"), 0.76f);
+            }));
+            list.Add(Seat("26_deadman_bigwin", "deadman", play => Until(play, "deadman", () => Command.Spin("deadman", 500), o => o.Win, 0.35f), true));
+            list.Add(Seat("27_deadman_jackpot", "deadman", play => Until(play, "deadman", () => Command.Spin("deadman", 2500), o => o.Win, 0.5f), true));
             var co = f.Collector;
             list.Add(new Shot
             {
@@ -198,12 +248,12 @@ namespace Vig.EditorTools
             });
             list.Add(new Shot
             {
-                Name = "13_collector_choice", Eye = RoomBuilder.U(co.Eye), At = RoomBuilder.U(co.Look), Hud = true,
+                Name = "13_collector_choice", Eye = Play.CollectorView().eye, At = Play.CollectorView().at, Hud = true,
                 Before = play => Run(play, 200),
             });
             list.Add(new Shot
             {
-                Name = "14_circuit_overload", Eye = RoomBuilder.U(co.Eye), At = RoomBuilder.U(co.Look), Hud = true,
+                Name = "14_circuit_overload", Eye = Play.CollectorView().eye, At = Play.CollectorView().at, Hud = true,
                 Before = play =>
                 {
                     // challenge him, and pull until someone takes a shock
@@ -226,7 +276,7 @@ namespace Vig.EditorTools
             });
             list.Add(new Shot
             {
-                Name = "15_boon_wheel", Eye = RoomBuilder.U(co.Eye), At = RoomBuilder.U(co.Look), Hud = true,
+                Name = "15_boon_wheel", Eye = Play.CollectorView().eye, At = Play.CollectorView().at, Hud = true,
                 Before = play =>
                 {
                     // fresh runs until one wins the Circuit, then spin the Boon
@@ -259,10 +309,57 @@ namespace Vig.EditorTools
             return list;
         }
 
-        /// <summary>Step the sim, the events going through the game's own handlers (lights, HUD).</summary>
+        /// <summary>Step the sim, the events going through the game's own handlers (lights, HUD), and the
+        /// tables' shows posed every tick as the game would (Twenty-One counts its cards out).</summary>
         static void Run(Play play, int ticks)
         {
-            for (int k = 0; k < ticks; k++) { play.G.Step(); play.Drain(); }
+            for (int k = 0; k < ticks; k++) { play.G.Step(); play.Drain(); play.Present(); }
+        }
+
+        /// <summary>Keep the night going and the bank deep enough for the shots' bets (a debug step, like the
+        /// TS skipTo), and a spare life, so a run of rolls can't end it.</summary>
+        static void Topup(Game g)
+        {
+            g.State.Bank = Math.Max(g.State.Bank, 6000);
+            g.State.Clock = Math.Max(g.State.Clock, State.TicksPerS * 60 * 3);
+            var p = g.State.Players[0];
+            p.Lives = Math.Max(p.Lives, 2);
+        }
+
+        /// <summary>Send a round and stop `frac` of the way through its hold (a mid-flight shot).</summary>
+        static void Roll(Play play, string table, Command c, float frac)
+        {
+            var g = play.G;
+            Settle(play, table, 0);
+            Topup(g);
+            g.Submit(0, c);
+            Run(play, 1);
+            var t = g.State.Tables[table];
+            if (t.Pending == null) return;
+            int hold = t.Until - (g.Tick - 1);
+            Run(play, Mathf.RoundToInt(frac * hold));
+        }
+
+        /// <summary>Let the round in the air land, then `after` seconds more.</summary>
+        static void Settle(Play play, string table, float after)
+        {
+            for (int i = 0; i < 1000 && play.G.State.Tables[table].Pending != null; i++) Run(play, 1);
+            Run(play, Mathf.RoundToInt(after * State.TicksPerS));
+        }
+
+        /// <summary>Play rounds until one lands that `ok` likes, and stop `after` seconds past its landing.</summary>
+        static void Until(Play play, string table, Func<Command> round, Func<Outcome, bool> ok, float after)
+        {
+            for (int i = 0; i < 40; i++)
+            {
+                Settle(play, table, 0);
+                Topup(play.G);
+                play.G.Submit(0, round());
+                Run(play, 1);
+                Settle(play, table, 0);
+                if (play.G.State.Tables[table].Last is Outcome o && ok(o)) break;
+            }
+            Run(play, Mathf.RoundToInt(after * State.TicksPerS));
         }
 
         static void SitAt(Play play, string table)
@@ -291,7 +388,7 @@ namespace Vig.EditorTools
             var tex = new Texture2D(w, h, TextureFormat.RGB24, false);
             var cam = play.Cam;
             foreach (var r in play.Room.Root.GetComponentsInChildren<ReflectionProbe>()) r.RenderProbe();
-            foreach (var s in Shots())
+            foreach (var s in Shots(play))
             {
                 s.Before?.Invoke(play);
                 play.Hud.Banner("", Color.clear, 0);
@@ -304,6 +401,8 @@ namespace Vig.EditorTools
                 play.Hud.Refresh(play.G, 0);
                 cam.transform.position = s.Eye;
                 cam.transform.rotation = Quaternion.LookRotation(s.At - s.Eye);
+                // the people, as far on as the sim (and glancing at this camera)
+                play.People.CatchUp(play.G, s.Eye);
                 Canvas.ForceUpdateCanvases();
                 cam.targetTexture = rt;
                 cam.Render();

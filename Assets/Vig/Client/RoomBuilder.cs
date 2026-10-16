@@ -22,6 +22,8 @@ namespace Vig.Client
         /// <summary>each table's screen (the panel goes here), facing the seat</summary>
         public readonly Dictionary<string, Transform> Screens = new Dictionary<string, Transform>();
         public Transform CollectorScreen;
+        /// <summary>each game table's group (its frame: felt at Placement.H, the seat toward -Z)</summary>
+        public readonly Dictionary<string, Transform> Tables = new Dictionary<string, Transform>();
         public readonly List<Light> RoomLights = new List<Light>();
         int shadowed;
 
@@ -253,6 +255,7 @@ namespace Vig.Client
             var def = Vig.Sim.Data.Tables.ById(t.Table);
             var tierColor = Look.TierColor(def.Tier);
             var g = Group(def.Name, U(t.X, 0, t.Z));
+            Tables[t.Table] = g;
             float w = (float)t.W, d = (float)t.D, h = (float)t.H;
             if (t.Cabinet) SlotCabinet(g, w, d, tierColor, true, def.Sign);
             else
@@ -327,7 +330,21 @@ namespace Vig.Client
         {
             float bw = Mathf.Min(1.4f, w), bd = Mathf.Min(0.85f, d);
             Part("plinth", Box(bw + 0.04f, 0.32f, bd + 0.04f, 0.03f), Look.BlackGloss, new Vector3(0, 0.16f, 0), null, g);
-            Part("body", Box(bw, 1.6f, bd, 0.08f), playable ? Look.Surface("cabRed", new Color(0.35f, 0.02f, 0.05f), 0.85f) : Look.Surface("cabDark", new Color(0.08f, 0.05f, 0.1f), 0.85f), new Vector3(0, 1.1f, 0), null, g);
+            // the playable machine stands taller: its reels turn in a window above the screen (BanditShow)
+            float top = playable ? 2.3f : 1.9f, topper = top + 0.25f;
+            if (playable)
+            {
+                var red = Look.Surface("cabRed", new Color(0.35f, 0.02f, 0.05f), 0.85f);
+                float wy0 = BanditShow.WinY - BanditShow.WinH / 2, wy1 = BanditShow.WinY + BanditShow.WinH / 2, side = (bw - BanditShow.WinW) / 2;
+                Part("body", Box(bw, wy0 - 0.3f, bd, 0.03f), red, new Vector3(0, (0.3f + wy0) / 2, 0), null, g);
+                Part("body top", Box(bw, top - wy1, bd, 0.03f), red, new Vector3(0, (wy1 + top) / 2, 0), null, g);
+                Part("body side", Box(side, BanditShow.WinH + 0.02f, bd, 0.01f), red, new Vector3(-(BanditShow.WinW + side) / 2, BanditShow.WinY, 0), null, g);
+                Part("body side", Box(side, BanditShow.WinH + 0.02f, bd, 0.01f), red, new Vector3((BanditShow.WinW + side) / 2, BanditShow.WinY, 0), null, g);
+                Part("reel box", Box(BanditShow.WinW, BanditShow.WinH, 0.04f, 0.005f), Look.BlackGloss, new Vector3(0, BanditShow.WinY, -bd / 2 + 0.47f), null, g);
+                Part("reel trim", MeshKit.Tube(MeshKit.RoundRect(BanditShow.WinW + 0.02f, BanditShow.WinH + 0.02f, 0.03f), 0.012f, 6, true), Look.Chrome, new Vector3(0, BanditShow.WinY, -bd / 2 - 0.006f), null, g);
+                Part("reel bulbs", Bulbs(MeshKit.RoundRect(BanditShow.WinW + 0.09f, BanditShow.WinH + 0.08f, 0.05f), 0.075f, 0.011f), Look.Glow("chaser", new Color(1f, 0.78f, 0.45f), 2.6f), new Vector3(0, BanditShow.WinY, -bd / 2 - 0.006f), null, g, false);
+            }
+            else Part("body", Box(bw, 1.6f, bd, 0.08f), Look.Surface("cabDark", new Color(0.08f, 0.05f, 0.1f), 0.85f), new Vector3(0, 1.1f, 0), null, g);
             // the button deck, sloping toward the player
             Part("deck", Box(bw - 0.1f, 0.06f, 0.32f, 0.02f), Look.Chrome, new Vector3(0, 0.88f, -bd / 2 - 0.08f), Quaternion.Euler(-12, 0, 0), g);
             for (int i = -2; i <= 2; i++)
@@ -335,12 +352,12 @@ namespace Vig.Client
                     i == 0 ? Look.Neon(tier, 2f) : Look.Glow("btnGlow", new Color(1f, 0.75f, 0.4f), 1.2f),
                     new Vector3(i * 0.18f, 0.915f, -bd / 2 - 0.1f), Quaternion.Euler(-12, 0, 0), g, false);
             // the topper: an arched crown with the sign
-            Part("topper", Box(bw + 0.02f, 0.5f, bd * 0.7f, 0.12f), Look.BlackGloss, new Vector3(0, 2.15f, 0.05f), null, g);
-            Part("topper neon", MeshKit.Tube(MeshKit.RoundRect(bw - 0.06f, 0.42f, 0.14f), 0.01f, 6, true), Look.Neon(tier, 4f), new Vector3(0, 2.15f, 0.05f - bd * 0.35f - 0.01f), null, g, false);
+            Part("topper", Box(bw + 0.02f, 0.5f, bd * 0.7f, 0.12f), Look.BlackGloss, new Vector3(0, topper, 0.05f), null, g);
+            Part("topper neon", MeshKit.Tube(MeshKit.RoundRect(bw - 0.06f, 0.42f, 0.14f), 0.01f, 6, true), Look.Neon(tier, 4f), new Vector3(0, topper, 0.05f - bd * 0.35f - 0.01f), null, g, false);
             // chaser bulbs round the glass, a chrome trim round the face
             Part("chaser bulbs", Bulbs(MeshKit.RoundRect(bw - 0.1f, 0.86f, 0.08f), 0.075f, 0.011f), Look.Glow("chaser", new Color(1f, 0.78f, 0.45f), 2.6f), new Vector3(0, 1.3f, -bd / 2 - 0.006f), null, g, false);
-            Part("trim", MeshKit.Tube(MeshKit.RoundRect(bw - 0.02f, 1.58f, 0.08f), 0.012f, 6, true), Look.Chrome, new Vector3(0, 1.1f, -bd / 2 - 0.004f), null, g);
-            if (sign != null) Neon.Text(g, sign, tier, new Vector3(0, 2.15f, 0.05f - bd * 0.35f - 0.03f), 0.2f);
+            Part("trim", MeshKit.Tube(MeshKit.RoundRect(bw - 0.02f, top - 0.32f, 0.08f), 0.012f, 6, true), Look.Chrome, new Vector3(0, (0.3f + top) / 2, -bd / 2 - 0.004f), null, g);
+            if (sign != null) Neon.Text(g, sign, tier, new Vector3(0, topper, 0.05f - bd * 0.35f - 0.03f), 0.2f);
             // the lever on the right as you face it (west in Unity: the player looks +Z, their right is +X)
             Part("lever", MeshKit.Tube(new[] { new Vector3(0, 0, 0), new Vector3(0.02f, 0.45f, 0) }, 0.015f, 8), Look.Chrome, new Vector3(bw / 2 + 0.05f, 1.15f, -0.1f), null, g);
             Part("knob", Cached("knob", () => MeshKit.Lathe(new[] { P(0, -0.05f), P(0.04f, -0.035f), P(0.05f, 0), P(0.04f, 0.035f), P(0, 0.05f) }, 16)), Look.Neon(Look.Blood, 1.2f), new Vector3(bw / 2 + 0.07f, 1.62f, -0.1f), null, g);
@@ -538,7 +555,8 @@ namespace Vig.Client
                 }
                 case "piano":
                 {
-                    var g = Group("piano", at, 200);
+                    // its keys (local -z) face south, to the pianist's bench (Layout's pianist sits south of it, facing north)
+                    var g = Group("piano", at, 20);
                     Part("body", Box(1.5f, 0.32f, 1.1f, 0.12f), Look.BlackGloss, new Vector3(0, 0.82f, 0), null, g);
                     Part("lid", Box(1.45f, 0.02f, 1.05f, 0.1f), Look.BlackGloss, new Vector3(0.05f, 1.25f, 0.18f), Quaternion.Euler(0, 0, 0) * Quaternion.Euler(-28, 0, 0), g);
                     Part("keys", Box(1.2f, 0.04f, 0.18f, 0.005f), Look.Surface("keys", new Color(0.92f, 0.9f, 0.85f), 0.7f), new Vector3(0, 0.86f, -0.62f), null, g);

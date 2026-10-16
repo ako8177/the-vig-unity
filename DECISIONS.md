@@ -55,3 +55,26 @@ Every decision with its reason. The TS game's log (#1-#87) is frozen in `docs/DE
   with no unlock or an unlocked one; the Insulated Kit can't come off it before its Collector dies.
   No golden trace ever landed on that slot with the Kit locked, so the traces are unchanged; a new
   rule check in SimCheck spins the slot 600 times locked and unlocked (and fails with the bug put back).
+- **U13 2026-10-15: The people are Blender-built rigid parts, posed by code.** Each family is a
+  re-runnable script (`art/people/build_collector.py`, `build_crowd.py`, on `art/blender_kit.py`) run in
+  Blender 5.2 through the MCP, exporting FBX to `Assets/Vig/Art/People/Resources/People/` (a Resources
+  folder, so the runtime finds the meshes with nothing hand-wired; `Editor/ArtImport.cs` sets the import:
+  meshes only, no materials, no rig). The look is U2's, not the TS pixel kit's: smooth lofts, bevelled
+  boxes, weighted normals, ~9k triangles a person. Shapes are written in Unity's frame and a part's
+  origin is its joint; a part's meshes come split by role (`head`, `head__dark`, `coll_head__eye`) and
+  `People.cs` gives each role a URP Lit material (the Collector's eyes: his tier's neon). The crowd keeps
+  the TS crowd's joints, measures and poses (npcs.ts), with each joint's X and Y turn negated for
+  Unity's frame; people who sit where the room has no seat bring one (slot stools, card chairs, the
+  piano bench), and the piano now faces its pianist (its keys were on the far side). **The Collector**
+  sits in his chair facing you, long-armed (0.88 m to the wrist, so from his chair his hands rest on the
+  felt), with legs under the table; he breathes, nods when he speaks, reaches for his pull, convulses
+  at a live lever and slumps with his eyes going out when he dies; the next nights' Collectors are the
+  same figure with their own eyes (`Collectors.Of(idx).Eyes`, TS #81). **Derivative flag (CLAUDE.md):**
+  a glowing-eyed figure seated opposite you is what TS #28 flagged as Buckshot Roulette's Dealer; TS #30
+  moved him to stand in the ring, and the owner's #80 brought the seated duel back (flagged there). This
+  builds #80's scene as the task asked; his look (top hat, gaunt long skull, violet slits, waistcoat,
+  long pale fingers) is the TS game's own. STYLE.md's "Don't" line citing #28 predates #80.
+- **U14 2026-10-15: At the Collector's table the camera looks up at him.** The sim's look point is the
+  screen lying on the felt, which framed only his chair's back. The client keeps the sim's eye but looks
+  0.22 m higher and 0.4 m further (`Play.CollectorView`, also the shot tool's 13-15): the screen sits in
+  the lower half of the view, readable, and he fills the upper. Presentation only; the sim is unchanged.

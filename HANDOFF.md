@@ -21,10 +21,14 @@ animations.
 
 ## Next (in order, unless the owner picks)
 
-1. **The Collector and the people**: model them in Blender through the MCP (Blender 5.2 is set up:
-   port 9876, the memory has the details), export FBX into `Assets/Vig/Art/`, place from
-   `Layout.Floor1.Npcs` and `Home.Family`. The Collector in his chair matters most: the 0:00 scene is
-   empty without him.
+1. **The people are in** (U13): the Collector and the crowd of 52 (PROGRESS.md). Left: the pit boss
+   (he drags a dead Collector out through the staff door in the TS game, `duel.ts` `funeral`), the
+   family at the house (`Home.Family`, once the house exists), the smokers' smoke. New models: copy
+   `art/people/build_crowd.py`'s pattern (shapes in Unity's frame, origin at the joint, roles by mesh
+   name), run it in Blender through the MCP (if port 9876 is closed, launch Blender with
+   `--python-expr "import addon_utils; addon_utils.enable('blender_mcp', default_set=True, persistent=True)"`),
+   then pose the parts in `People.cs`. **Ask the owner** whether the Collector's look lands, and about
+   U13's derivative flag (the seated duel, TS #28/#30/#80).
 2. **The table animations**: a 3D die on Hi-Lo's baize and two on Dead Man's, Red Line's card flip, a
    real Wheel of Marks (25 slots from `WheelOfMarks.Layout`), the Bandit's reels rolling, Twenty-One
    dealt card by card (`Feel` holds the timings; the sim already holds results back for them).

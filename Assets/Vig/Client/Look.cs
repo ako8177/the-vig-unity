@@ -16,7 +16,7 @@ namespace Vig.Client
         public static readonly Color Low = Hex("00e60f"), LowHi = Hex("c4ff91");
         public static readonly Color Mid = Hex("f0ff00"), MidHi = Hex("ffff8e");
         public static readonly Color High = Hex("f5320a"), HighHi = Hex("f5916e");
-        public static readonly Color Coll = Hex("be5aff"), CollHi = Hex("e1b6ff");
+        public static readonly Color Coll = Hex("be5aff"), CollHi = Hex("e1b6ff"), CollLo = Hex("801cc0");
         public static readonly Color Soul = Hex("32fad2"), Marker = Hex("6e8ef0"), Blood = Hex("ac0a48");
         public static readonly Color Brass = Hex("f8d280"), Gold = Hex("f8d280"), Cream = Hex("f7c3a0");
         public static readonly Color Indigo = Hex("1a0070"), IndigoHi = Hex("3c1e8e"), Pink = Hex("d7198c"), PinkHi = Hex("fa5adc"), Teal = Hex("05826c");

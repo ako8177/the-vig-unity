@@ -21,6 +21,8 @@ namespace Vig.Client
         readonly TableDef def;
         readonly TextMeshProUGUI title, tier, odds, how, bet, result, hint;
         readonly Image glow;
+        /// <summary>Twenty-One's cards on the felt: the screen prints only what's been dealt so far</summary>
+        public TwentyOneShow Deal;
 
         public TableScreen(string id, Transform screen, float w, float h)
         {
@@ -60,9 +62,6 @@ namespace Vig.Client
 
         /// <summary>A die's face: its number in a lit box.</summary>
         public static string Die(int d) => $"<mark=#ffffff22 padding=8,8,2,2><b> {d} </b></mark>";
-
-        static string[] sym;
-        static string[] Sym => sym = sym ?? new[] { "·", "BAR", Glyph('★', "*"), "7" };
 
         public void Refresh(Game g, PlayerState me, int chosenBet)
         {
@@ -111,12 +110,15 @@ namespace Vig.Client
             {
                 var h = t.Hand;
                 var sb = new StringBuilder();
-                sb.Append(Ui.Col("DEALER  ", Look.Smoke)).Append(Card(h.Dealer[0])).Append("  ").Append(Ui.Col("[?]", Look.Smoke)).Append('\n');
+                // only what's been dealt onto the felt so far (TwentyOneShow brings it out a card at a time)
+                int dn = Deal?.ShownDealer(h.Dealer.Count) ?? h.Dealer.Count;
+                sb.Append(Ui.Col("DEALER  ", Look.Smoke)).Append(dn > 0 ? Card(h.Dealer[0]) : "").Append("  ").Append(dn > 1 ? Ui.Col("[?]", Look.Smoke) : "").Append('\n');
                 for (int i = 0; i < h.Hands.Count; i++)
                 {
                     var hh = h.Hands[i];
-                    var v = TwentyOne.HandValue(hh.Cards);
-                    sb.Append(i == h.Active ? "> " : "  ").Append(string.Join(" ", hh.Cards.Select(Card))).Append(Ui.Col($"   {(v.soft ? "SOFT " : "")}{v.total}", Look.Brass)).Append('\n');
+                    var cards = hh.Cards.Take(Deal?.Shown(i, hh.Cards.Count) ?? hh.Cards.Count).ToList();
+                    var v = TwentyOne.HandValue(cards);
+                    sb.Append(i == h.Active ? "> " : "  ").Append(string.Join(" ", cards.Select(Card))).Append(cards.Count > 0 ? Ui.Col($"   {(v.soft ? "SOFT " : "")}{v.total}", Look.Brass) : "").Append('\n');
                 }
                 return $"<size=24>{sb}</size>";
             }
@@ -126,12 +128,8 @@ namespace Vig.Client
             if (o == null) return Ui.Col("PLACE YOUR BET", Look.Smoke);
             Color c = o.Win ? Look.LowHi : o.LifeLost == true ? Look.Blood : Look.Bone;
             string face = "";
-            if (o.Reels != null)
-            {
-                var rows = new List<string>();
-                for (int r = 0; r < 3; r++) rows.Add(string.Join("  ", Enumerable.Range(0, 3).Select(k => Sym[o.Reels[r * 3 + k]].PadLeft(3))));
-                face = $"<size=20><mspace=0.62em>{string.Join("\n", rows)}</mspace></size>\n";
-            }
+            // the Bandit's grid is on its reels (BanditShow); the others print their face beside the verdict
+            if (o.Reels != null) face = "";
             else if (o.Dice != null) face = string.Join(" ", o.Dice.Select(Die)) + "   ";
             else if (o.Card != null) face = Card(o.Card) + "  ";
             else if (o.Slot != null) face = Ui.Col(WheelOfMarks.Layout[o.Slot.Value].ToUpperInvariant(), WheelColor(WheelOfMarks.Layout[o.Slot.Value])) + "  ";
@@ -178,7 +176,7 @@ namespace Vig.Client
                 case Phase.Choice:
                     body.text = $"YOU OWE {Ui.Money(s.Quota)}.  THE BANK HOLDS {Ui.Money(s.Bank)}.\n\n" +
                         $"{Ui.Col("PAY", Look.Brass)}: THE QUOTA LEAVES THE BANK.\n" +
-                        $"{Ui.Col("CHALLENGE", Look.Coll)}: {r.Levers} LEVERS, {(s.Mods.Overloads3 ? Wheels.BigOverloads : r.Live)} LIVE. TWO SHOCKS END YOU (A LIFE, THE QUOTA IS HIS);\n" +
+                        $"{Ui.Col("CHALLENGE", Look.Coll)}: {r.Levers} LEVERS, {(s.Mods.Overloads3 ? r.Live + 1 : r.Live)} LIVE. TWO SHOCKS END YOU (A LIFE, THE QUOTA IS HIS);\n" +
                         $"TWO SHOCKS KILL HIM (KEEP THE QUOTA). YOU WIN {Pct(s.Mods.Overloads3 ? r.OddsBane : r.OddsWin)} ({Pct(r.OddsWithKit)} WITH THE INSULATED KIT).";
                     hint.text = "P  PAY        G  CHALLENGE";
                     break;

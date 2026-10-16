@@ -38,12 +38,39 @@
 - The table animations (dice on the baize, the shuffle and flip, the wheel turning, rolling reels, the
   deal card by card) and the win celebrations; the Wheel of Marks has no wheel yet, Twenty-One's table
   isn't a half-moon.
-- People: the crowd of 52, the dealers, the pit boss, the family, the Collector himself (his chair is
-  empty). The TS game's Blender people (`../the-vig/public/models/people.glb`) are low-poly for the
-  pixel look; they want rebuilding for this one.
+- People still missing: the pit boss who carries a dead Collector out, the family at the house; the
+  smokers' smoke, the crowd's chatter and spoken lines (see "the people" below for what's done).
 - Sound: the lounge music, every synthesized effect, the spoken lines.
 - The title, how-to-play, settings, pause, results screens; saving settings and meta (upgrades, best
   floor, unlocked charms); the drunk camera; the cage (charms come by post from the house).
 - Co-op (Milestone 3 in the TS plan; the sim is ready for it).
+
+PixelLab spend: 0.
+
+## 2026-10-15: the people (U13, U14)
+
+**Done**
+
+- **The Collector** in his high-backed chair across his round table, facing you, eyes burning his tier's
+  violet (neon, so they bloom): a gaunt long skull, a top hat with a violet band, a high open collar, a
+  frock coat over a violet waistcoat, long arms and long pale fingers resting on the felt, legs under
+  the table. He breathes and looks about; he nods when 0:00 comes and when he speaks at the Circuit;
+  he leans in and reaches for his pull, convulses (eyes flickering) at a live lever, and slumps with
+  his eyes going out when he dies; the next night's Collector has his own eyes. All from the sim's
+  state and events (`People.Him`).
+- **The crowd of 52** from `Layout.Floor1.Npcs`, each dressed from a stable hash (coat or dress, hair
+  or a hat, skin, trousers, tie): slot players on stools pulling handles (the carousel's too), card
+  and roulette players on chairs pushing chips, the dealers in bow ties and shirtsleeves (Twenty-One's
+  deals as cards leave the shoe), the craps rail, the bartender pacing and polishing a glass, drinkers
+  sipping, smokers with glowing cigarettes, the booths, the pianist on a bench (the piano turned to
+  face him), railbirds who turn to watch when you sit at their table, walkers pacing the floor. They
+  breathe, glance at you when you're close, cheer your wins (a big one brings the room in) and put
+  their hands to their heads at a big loss.
+- **The pipeline**: `art/blender_kit.py` + `art/people/build_collector.py`, `build_crowd.py` (run in
+  Blender 5.2 via the MCP; re-runnable) → `Assets/Vig/Art/People/Resources/People/{Collector,Crowd}.fbx`
+  (9k and 15k triangles; a person ~9k) → `Editor/ArtImport.cs` (import settings) → `Client/People.cs`.
+- **The camera at the Collector's table** looks up across the screen to him (U14).
+- **Shots**: `28_collector_floor` (him under normal light); the door, back room, bar, lounge and 13-15
+  now have people.
 
 PixelLab spend: 0.

@@ -17,9 +17,11 @@ namespace Vig.Client
         const int Me = 0;
         Camera cam;
         RoomBuilder room;
+        People people;
         Hud hud;
         readonly Dictionary<string, TableScreen> screens = new Dictionary<string, TableScreen>();
         CollectorScreen collScreen;
+        Dictionary<string, TableShow> shows = new Dictionary<string, TableShow>();
         readonly Dictionary<string, int> bets = new Dictionary<string, int>();
         readonly List<(Light l, float i)> lights = new List<(Light, float)>();
         double acc;
@@ -34,6 +36,7 @@ namespace Vig.Client
         {
             Atmosphere.Setup(transform);
             room = RoomBuilder.Build(transform);
+            people = People.Build(transform);
             foreach (var l in room.RoomLights) lights.Add((l, l.intensity));
             cam = Atmosphere.MakeCamera(transform);
             foreach (var kv in room.Screens)
@@ -42,6 +45,11 @@ namespace Vig.Client
                 screens[kv.Key] = new TableScreen(kv.Key, kv.Value, (float)pl.Screen.W, (float)pl.Screen.H);
                 bets[kv.Key] = Vig.Sim.Data.Tables.ById(kv.Key).Bet.Std;
             }
+            // each table's round in 3D (Shows.cs); their own lamps dim at 0:00 with the room's
+            shows = TableShow.Build(room);
+            if (screens.TryGetValue("twentyone", out var t21) && shows.TryGetValue("twentyone", out var s21)) t21.Deal = (TwentyOneShow)s21;
+            foreach (var l in room.Root.GetComponentsInChildren<Light>(true))
+                if (l.name != "flash" && !lights.Any(x => x.l == l)) lights.Add((l, l.intensity));
             var cs = Layout.Floor1.Collector.Screen;
             collScreen = new CollectorScreen(room.CollectorScreen, (float)cs.W, (float)cs.H);
             hud = new Hud();
@@ -64,6 +72,7 @@ namespace Vig.Client
             camPos = Eye(curSim);
             camRot = Quaternion.Euler(pitch, yaw, 0);
             hud?.Banner("NIGHT 1", Color.white);
+            foreach (var sh in shows.Values) sh.Reset();
             RefreshAll(true);
         }
 
@@ -121,8 +130,20 @@ namespace Vig.Client
             }
             if (steps == 8) acc = 0;
             CameraFollow();
+            people.Tick(G, Time.deltaTime, cam.transform.position);
             RefreshAll(false);
+            Animate((float)(acc * State.TicksPerS));
         }
+
+        /// <summary>Pose every table's round for this moment (`alpha`: the fraction of the next tick).</summary>
+        void Animate(float alpha)
+        {
+            if (G == null) return;
+            foreach (var sh in shows.Values) sh.Update(G, G.Tick + alpha);
+        }
+
+        /// <summary>Where the seated eye looks at a table: its screen, or beside it where the show is.</summary>
+        public Vector3 SeatedLook(Placement pl) => RoomBuilder.U(pl.Look) + (shows.TryGetValue(pl.Table, out var sh) ? sh.LookShift : Vector3.zero);
 
         // ---------------------------------------------------------------- input → commands
 
@@ -234,11 +255,16 @@ namespace Vig.Client
 
         void OnEvent(SimEvent e)
         {
+            people?.OnEvent(e, G);
             switch (e.T)
             {
+                case "play":
+                    if (e.Table != null && shows.TryGetValue(e.Table, out var played)) played.OnPlay(e.Ticks ?? 0);
+                    break;
                 case "round":
                 {
                     var o = e.Outcome;
+                    if (shows.TryGetValue(o.Table, out var landed)) landed.OnLanded(o, G.Tick);
                     var def = Vig.Sim.Data.Tables.ById(o.Table);
                     int net = o.Ret - o.Bet;
                     string amt = net > 0 ? Ui.Col("+" + Ui.Money(net), Look.LowHi) : net < 0 ? Ui.Col(Ui.Money(net), Look.Blood) : Ui.Col("$0", Look.Smoke);
@@ -258,7 +284,7 @@ namespace Vig.Client
                 {
                     // face the table: standing up again leaves you looking at it
                     var pl = Layout.Floor1.TableOf(e.Table);
-                    var look = RoomBuilder.U(pl.Look) - RoomBuilder.U(pl.Eye);
+                    var look = SeatedLook(pl) - RoomBuilder.U(pl.Eye);
                     yaw = Mathf.Atan2(look.x, look.z) * Mathf.Rad2Deg;
                     pitch = 0;
                     break;
@@ -311,14 +337,14 @@ namespace Vig.Client
             {
                 var pl = Layout.Floor1.TableOf(p.Seat);
                 targetPos = RoomBuilder.U(pl.Eye);
-                var look = RoomBuilder.U(pl.Look) - targetPos;
+                var look = SeatedLook(pl) - targetPos;
                 targetRot = Quaternion.LookRotation(look);
             }
             else if (s.Phase != Phase.Floor && s.Phase != Phase.Home)
             {
-                var c = Layout.Floor1.Collector;
-                targetPos = RoomBuilder.U(c.Eye);
-                targetRot = Quaternion.LookRotation(RoomBuilder.U(c.Look) - targetPos);
+                var (eye, at) = CollectorView();
+                targetPos = eye;
+                targetRot = Quaternion.LookRotation(at - eye);
             }
             else
             {
@@ -347,6 +373,19 @@ namespace Vig.Client
             hud.Refresh(G, Me);
         }
 
+        /// <summary>
+        /// Where you look at the Collector's table: from the sim's seated eye, not down at the screen as the
+        /// sim's look point has it, but up across the screen to him (the screen in the lower half of the
+        /// view, he in the upper: DECISIONS U14).
+        /// </summary>
+        public static (Vector3 eye, Vector3 at) CollectorView()
+        {
+            var c = Layout.Floor1.Collector;
+            var toHim = RoomBuilder.U(c.X, 0, c.Z) - RoomBuilder.U(c.Stand.X, 0, c.Stand.Z);
+            toHim.y = 0;
+            return (RoomBuilder.U(c.Eye), RoomBuilder.U(c.Look) + Vector3.up * 0.22f + toHim.normalized * 0.4f);
+        }
+
         /// <summary>For the screenshot tool: stand at a point looking somewhere, with no input.</summary>
         public void Pose(Vector3 unityPos, Vector3 lookAt)
         {
@@ -357,7 +396,14 @@ namespace Vig.Client
         public Camera Cam => cam;
         public Hud Hud => hud;
         public RoomBuilder Room => room;
-        public void Refresh() => RefreshAll(true);
+        public People People => people;
+        public void Refresh()
+        {
+            RefreshAll(true);
+            Animate(0);
+        }
+        /// <summary>For the screenshot tool, every tick it steps: the shows keep count of what they've dealt.</summary>
+        public void Present() => Animate(0);
         /// <summary>Hand the sim's pending events to the presentation (the screenshot tool steps the sim itself).</summary>
         public void Drain() { foreach (var e in G.DrainEvents()) OnEvent(e); }
     }
