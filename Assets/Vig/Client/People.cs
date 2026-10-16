@@ -166,6 +166,16 @@ namespace Vig.Client
                     var pl = F.TableOf(o.Table);
                     var at = pl != null ? RoomBuilder.U(pl.X, 0, pl.Z) : Vector3.zero;
                     React(o.Table, net > 0, net >= Feel.BigWin || net <= -Feel.BigWin, at);
+                    // the regulars (U29) react to their own hands: a win lifts them, a bust puts their head in their hands
+                    if (o.Regulars21 != null)
+                        foreach (var p in crowd)
+                        {
+                            var r = p.Spot.Who != null ? o.Regulars21.Find(x => x.Who == p.Spot.Who) : null;
+                            if (r == null) continue;
+                            p.Cheer = r.Ret > r.Bet ? (r.Word == "NATURAL" ? 2.2f : 1.3f) : 0;
+                            p.Big = r.Word == "NATURAL";
+                            p.Groan = r.Ret < r.Bet && r.Word.StartsWith("BUSTS") ? 1.4f : 0;
+                        }
                     break;
                 }
                 default:

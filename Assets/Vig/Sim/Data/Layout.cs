@@ -64,6 +64,8 @@ namespace Vig.Sim.Data
     public sealed class NpcSpot
     {
         public string Role; public double X, Z, Yaw; public bool Seated; public string Room; public string Table;
+        /// <summary>a Twenty-One regular's id (U29): they play the hands the sim deals them</summary>
+        public string Who;
         public V2[] Path;
     }
 
@@ -291,6 +293,13 @@ namespace Vig.Sim.Data
                 npc("table", -5.4, 1.4, N, true, "floor", null), npc("dealer", -4.6, -0.7, S, false, "floor", null),
                 npc("dealer", 6.5, 3.95, S, false, "floor", "twentyone"),
             });
+            // Twenty-One's regulars (U29): first base on your right, third base on your left, at the table's edge
+            if (!two)
+            {
+                var dot = npc("table", 7.32, 5.62, N - 0.3, true, "floor", "twentyone"); dot.Who = "dot";
+                var ike = npc("table", 5.68, 5.62, N + 0.3, true, "floor", "twentyone"); ike.Who = "ike";
+                npcs.Add(dot); npcs.Add(ike);
+            }
             // the bar: the bartender behind it, drinkers at it
             var bartender = npc("bartender", -13.3, 5, Wd, false, "floor", null);
             bartender.Path = new[] { new V2(-13.3, 2), new V2(-13.3, 8.6) };

@@ -2,7 +2,9 @@
 // reshuffled when a quarter is left; the dealer hits soft 17 and peeks for a natural (a dealer natural
 // ends the hand at once; a player natural pays 3:2); ties push. You may hit, stand, double on any first
 // two cards (after a split too) and split a pair once (aces take one card each). The printed return is
-// basic strategy's, by dynamic programming over an endless shoe (DESIGN.md §3).
+// basic strategy's, by dynamic programming over an endless shoe (DESIGN.md §3). Two regulars share the
+// shoe (U29, DESIGN.md §13): dealt round with you, first base playing before you and third base after;
+// their money is their own, and the cards they take are as random as the ones you get.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -248,6 +250,43 @@ namespace Vig.Sim.Tables
             return (two, two && h.Hands.Count == 1 && CardValue(cur.Cards[0]) == CardValue(cur.Cards[1]));
         }
 
+        /// <summary>A regular plays their hand: the book (basic strategy, doubling) or a hunch (the dealer's
+        /// own rule: hit to 17). Nobody plays into a natural.</summary>
+        static void PlayRegular(Game g, Hand21 hand, RegularHand21 r)
+        {
+            if (r.Done) return;
+            r.Done = true;
+            if (IsNatural(r.Cards)) return;
+            bool book = Regulars.ById(r.Who)?.Style == "book";
+            int up = CardValue(hand.Dealer[0]);
+            for (int k = 0; k < 12; k++)
+            {
+                var v = HandValue(r.Cards);
+                if (v.total >= 21) return;
+                string mv = book ? Advise(r.Cards, up, r.Cards.Count == 2, false) : v.total < 17 ? "hit" : "stand";
+                if (mv == "stand") return;
+                r.Cards.Add(Deal(g));
+                if (mv == "double") { r.Bet *= 2; return; }
+            }
+        }
+
+        /// <summary>What the dealer hands a regular back, by the table's rules (no marks, no charms: theirs).</summary>
+        static void PayRegular(RegularHand21 r, List<Card> dealer, bool dn)
+        {
+            int pv = HandValue(r.Cards).total, dv = HandValue(dealer).total;
+            bool rn = IsNatural(r.Cards);
+            double x; string word;
+            if (rn && dn) { x = 1; word = "PUSH"; }
+            else if (rn) { x = 2.5; word = "NATURAL"; }
+            else if (dn) { x = 0; word = "LOSES"; }
+            else if (pv > 21) { x = 0; word = $"BUSTS {pv}"; }
+            else if (dv > 21 || pv > dv) { x = 2; word = $"WINS {pv}"; }
+            else if (pv == dv) { x = 1; word = $"PUSH {pv}"; }
+            else { x = 0; word = $"LOSES {pv}"; }
+            r.Ret = Js.RoundInt(r.Bet * x);
+            r.Word = word;
+        }
+
         Outcome Settle(Game g, PlayerState p)
         {
             var hand = g.State.Tables["twentyone"].Hand;
@@ -256,8 +295,14 @@ namespace Vig.Sim.Tables
             bool pn = one && IsNatural(hand.Hands[0].Cards), dn = IsNatural(hand.Dealer);
             var words = new List<string>();
             var res = new List<HandResult>();
-            // the dealer plays only while a hand still stands (not every hand bust, no naturals)
-            if (!pn && !dn && hand.Hands.Any(h => HandValue(h.Cards).total <= 21)) DealerPlays(g, hand.Dealer);
+            var regs = hand.Regulars ?? new List<RegularHand21>();
+            // third base plays (and first base, if your natural came before its turn); a dealer natural ends it
+            if (!dn) foreach (var r in regs) PlayRegular(g, hand, r);
+            // the dealer plays while any hand at the table still stands (not all bust, not all naturals)
+            bool youStand = !pn && hand.Hands.Any(h => HandValue(h.Cards).total <= 21);
+            bool theyStand = regs.Any(r => HandValue(r.Cards).total <= 21 && !IsNatural(r.Cards));
+            if (!dn && (youStand || theyStand)) DealerPlays(g, hand.Dealer);
+            foreach (var r in regs) PayRegular(r, hand.Dealer, dn);
             int dv = HandValue(hand.Dealer).total;
             foreach (var h in hand.Hands)
             {
@@ -284,6 +329,7 @@ namespace Vig.Sim.Tables
             {
                 Table = Id, Player = p.Id, Bet = bet, Ret = retT, Win = retT > bet, Factor = factor, Text = text,
                 Hands21 = res, Dealer21 = hand.Dealer.Select(c => c.Clone()).ToList(),
+                Regulars21 = regs.Count > 0 ? regs.Select(r => r.Clone()).ToList() : null,
             };
         }
 
@@ -314,9 +360,14 @@ namespace Vig.Sim.Tables
         public override double? HoldS(Outcome o)
         {
             int dealer = o.Dealer21?.Count ?? 2;
-            int mine = (o.Hands21 ?? new List<HandResult>()).Sum(h => h.Cards.Count);
-            bool natural = mine == 2 && dealer == 2 && o.Hands21?.Count == 1;
-            int cards = natural ? 4 + 1 : 1 + 1 + Math.Max(0, dealer - 2);
+            var hands = o.Hands21 ?? new List<HandResult>();
+            var regs = o.Regulars21 ?? new List<RegularHand21>();
+            int mine = hands.Sum(h => h.Cards.Count);
+            // settled on the deal (a natural either side): every card of it; else your last card, third base's
+            // draws, the hole card and the dealer's draws
+            bool natural = mine == 2 && hands.Count == 1 && (IsNatural(hands[0].Cards) || (o.Dealer21 != null && IsNatural(o.Dealer21)));
+            int cards = natural ? 2 * (2 + regs.Count) + regs.Sum(r => r.Cards.Count - 2) + Math.Max(0, dealer - 2) + 1
+                : 1 + regs.Where(r => Regulars.ById(r.Who)?.Seat == 1).Sum(r => r.Cards.Count - 2) + 1 + Math.Max(0, dealer - 2);
             return cards * Feel.DealGap + 0.5;
         }
 
@@ -335,15 +386,29 @@ namespace Vig.Sim.Tables
                     t.Shoe = Shuffle(g);
                     g.Emit(new SimEvent { T = "shuffle", Table = "twentyone" });
                 }
-                // you, the dealer, you, the dealer (face down)
-                var a = Deal(g); var d1 = Deal(g); var c2 = Deal(g); var d2 = Deal(g);
+                // round the table twice: first base, you, third base, the dealer (the second face down)
+                int min = Data.Tables.LimitsOf(Def, g.State.Floor).Min;
+                var regs = Regulars.All.OrderBy(d => d.Seat).Select(d => new RegularHand21 { Who = d.Id, Cards = new List<Card>(), Bet = d.Mins * min }).ToList();
+                var mine = new List<Card>();
+                var dealer = new List<Card>();
+                for (int k = 0; k < 2; k++)
+                {
+                    foreach (var r in regs) if (Regulars.ById(r.Who).Seat == 0) r.Cards.Add(Deal(g));
+                    mine.Add(Deal(g));
+                    foreach (var r in regs) if (Regulars.ById(r.Who).Seat == 1) r.Cards.Add(Deal(g));
+                    dealer.Add(Deal(g));
+                }
                 t.Hand = new Hand21
                 {
                     Bet = amount, Active = 0, Stage = "play",
-                    Hands = new List<PlayerHand21> { new PlayerHand21 { Cards = new List<Card> { a, c2 }, Bet = amount } },
-                    Dealer = new List<Card> { d1, d2 },
+                    Hands = new List<PlayerHand21> { new PlayerHand21 { Cards = mine, Bet = amount } },
+                    Dealer = dealer,
+                    Regulars = regs,
                 };
-                if (IsNatural(t.Hand.Hands[0].Cards) || IsNatural(t.Hand.Dealer)) return StartResult.Of(Settle(g, p));
+                if (IsNatural(dealer)) return StartResult.Of(Settle(g, p));
+                // first base plays before you
+                foreach (var r in regs) if (Regulars.ById(r.Who).Seat == 0) PlayRegular(g, t.Hand, r);
+                if (IsNatural(mine)) return StartResult.Of(Settle(g, p));
                 return StartResult.Pending;
             }
             if (cmd.T == "call")

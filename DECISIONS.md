@@ -141,3 +141,10 @@ Every decision with its reason. The TS game's log (#1-#87) is frozen in `docs/DE
   build); the player loads those, and the editor always draws fresh, so a changed texture is never stale.
   Boot is now about 1.3 s. URP's "strip unused post-processing variants" was removing the Bloom shader
   from builds (the volume is made at runtime, so URP saw no use of it); both strip flags are off.
+- **U29 2026-10-16: Regulars at Twenty-One.** You play with two people now: Dot (first base, plays the book)
+  and Ike (third base, plays a hunch), dealt by the sim from your shoe in a dealer's real order, their cards
+  on the felt and their hands on the screen, reacting to their own results, talking now and then. Their money
+  is their own; the cards they take don't move your odds (measured: DESIGN.md §13). Ike can take the dealer's
+  bust card, and Dot only says so when it's true. Golden traces regenerated (U11): the regulars draw from the
+  shoe. Not derivative: blackjack with other players is the casino's own; the names, lines and the rule that
+  the superstition is checked are ours.

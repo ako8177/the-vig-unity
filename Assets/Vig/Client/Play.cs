@@ -73,6 +73,56 @@ namespace Vig.Client
             Debug.Log($"Vig: booted in {clock.ElapsedMilliseconds} ms");
         }
 
+        /// <summary>The regulars talk (U29): the whole table cheering a dealer bust, third base blamed for taking
+        /// the dealer's bust card (only when it really would have busted him), or a line from one of them.
+        /// Picked from the tick, not the sim's RNG: it's talk, not a result.</summary>
+        void TableTalk(Outcome o, Vector3? at)
+        {
+            var regs = o.Regulars21;
+            int dv = Vig.Sim.Tables.TwentyOne.HandValue(o.Dealer21).total;
+            bool youWon = o.Ret > o.Bet;
+            if (dv > 21 && youWon && regs.All(r => r.Ret > r.Bet))
+            {
+                hud.Banner("DEALER BUSTS: THE TABLE WINS", Look.LowHi, 1.6f);
+                Sfx.Play("cheer", at, 0.7f);
+                return;
+            }
+            var ike = regs.Find(r => Regulars.ById(r.Who)?.Seat == 1);
+            if (ike != null && !youWon && dv <= 21 && ike.Cards.Count > 2 && BustCardTaken(o.Dealer21, ike.Cards[ike.Cards.Count - 1]))
+            {
+                hud.Toast($"{Ui.Col("DOT", Look.Gold)}  \"{Regulars.ById(ike.Who).Name}. That was the dealer's bust card.\"", 5);
+                return;
+            }
+            int pick = (int)(G.Tick % 997);
+            if (pick % 3 != 0) return;
+            var who = regs[(pick / 3) % regs.Count];
+            var def = Regulars.ById(who.Who);
+            string[] lines = who.Word == "NATURAL" ? (def.Style == "book" ? new[] { "There it is.", "Twenty-one, thank you." } : new[] { "Blackjack, baby! Drinks on Dot!", "Felt that one coming." })
+                : who.Ret > who.Bet ? (def.Style == "book" ? new[] { "By the book.", "Thank you, dealer.", "Patience pays." } : new[] { "Told you. I can feel 'em.", "Hot seat, this one.", "Never doubt the hunch." })
+                : who.Word.StartsWith("BUSTS") ? (def.Style == "book" ? new[] { "Even the book busts." } : new[] { "That one had my name on it.", "Who's counting? Not me.", "One more card. Always one more." })
+                : who.Ret < who.Bet ? (def.Style == "book" ? new[] { "Right play. Wrong card.", "It evens out." } : new[] { "Dealer's on a heater.", "Shoe's cold. Shoe's cold." })
+                : new[] { "Push. I'll take it." };
+            hud.Toast($"{Ui.Col(def.Name.ToUpperInvariant(), Look.Gold)}  \"{lines[(pick / 7) % lines.Length]}\"", 4.5f);
+        }
+
+        /// <summary>Would the dealer have busted if third base had left its last card in the shoe? It would have
+        /// been his next draw, the rest of his draws one later.</summary>
+        static bool BustCardTaken(List<Card> dealer, Card taken)
+        {
+            if (dealer.Count < 2) return false;
+            var alt = new List<Card> { dealer[0], dealer[1] };
+            var queue = new List<Card> { taken };
+            queue.AddRange(dealer.Skip(2));
+            int q = 0;
+            for (;;)
+            {
+                var v = Vig.Sim.Tables.TwentyOne.HandValue(alt);
+                if (v.total > 17 || (v.total == 17 && !v.soft)) return v.total > 21;
+                if (q >= queue.Count) return false;
+                alt.Add(queue[q++]);
+            }
+        }
+
         /// <summary>PLAY on the title screen: a run on the chosen options.</summary>
         void StartChosen()
         {
@@ -461,6 +511,7 @@ namespace Vig.Client
                     if (net > 0 && streak >= 3 && net < Feel.BigWin) hud.Banner(streak >= 6 ? $"ON FIRE: {streak} IN A ROW" : $"ON A ROLL: {streak} IN A ROW", Look.Gold, 1.4f);
                     // the Bandit's near miss, only when it really was one: two sevens on a line and the third not
                     if (o.Table == "bandit" && o.Reels != null && !o.Win && NearMiss(o.Reels)) { hud.Toast(Ui.Col("SO CLOSE: TWO SEVENS ON A LINE", Look.Gold)); Sfx.Play("groan", at, 0.35f, 1.3f); }
+                    if (o.Regulars21 != null) TableTalk(o, at);
                     break;
                 }
                 case "ride":

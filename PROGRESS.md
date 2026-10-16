@@ -128,4 +128,13 @@ PixelLab spend: 0.
 - Floor 2's crowd is floor 1's people at the new tables; the Collector is the same figure; dealers don't
   yet handle the new games' pieces.
 - The house's furniture is plain blocks; the family is the crowd's kit.
-- Side bets; NPC players at Twenty-One.
+- Side bets.
+
+## 2026-10-16: the regulars (U29)
+
+- **Twenty-One has company**: Dot at first base (the book) and Ike at third (a hunch), dealt by the sim from
+  your shoe in a dealer's order, their cards and stakes on the felt, their hands on the screen. They cheer
+  their wins, put their heads in their hands on a bust, and talk: the whole table wins when the dealer busts;
+  Dot calls out Ike when his card really was the dealer's bust card.
+- **Checks**: a 100,000-hand measurement shows your return with them at the table is the printed 0.992;
+  golden traces regenerated. 254 green. Shot 48 (the table over your shoulder).

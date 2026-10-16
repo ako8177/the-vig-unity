@@ -1,7 +1,8 @@
 // The card tables. Red Line: the deck riffled, one card dealt face down and turned over. Twenty-One: a
-// card out of the shoe every Feel.DealGap (you, the dealer, you, the dealer face down; a hit slides in;
-// a split parts the pair), and at the stand the hole card turns before the dealer draws. The cards are
-// the sim's: the hand in play, or the outcome in the air or landed.
+// card out of the shoe every Feel.DealGap in the order a dealer deals (first base, you, third base, the
+// dealer; twice round, the dealer's second face down; first base's draws; yours, a split parting the
+// pair; third base's; the hole card turns; the dealer draws). The regulars (U29) sit at first and third
+// base. The cards are the sim's: the hand in play, or the outcome in the air or landed.
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -115,12 +116,17 @@ namespace Vig.Client
         readonly Props.CardProp[] dealerCards = new Props.CardProp[Max];
         readonly Props.CardProp[][] handCards = { new Props.CardProp[Max], new Props.CardProp[Max] };
         readonly Transform[][] stacks = { new Transform[2], new Transform[2] };
+        /// <summary>the regulars' cards and stakes, by seat (0 first base, on your right; 1 third base)</summary>
+        readonly Props.CardProp[][] regCards = { new Props.CardProp[Max], new Props.CardProp[Max] };
+        readonly Transform[][] regStacks = { new Transform[2], new Transform[2] };
         readonly Vector3 mouth;
+        const int FlipRow = -9;
 
         /// <summary>cards on the cloth so far, per hand and the dealer's: the rest are still in the shoe,
         /// coming out one every Feel.DealGap (the screen prints only these)</summary>
         public readonly List<int> SeenH = new List<int>();
         public int SeenD;
+        public readonly int[] SeenR = new int[2];
         /// <summary>the dealer's hole card has turned over</summary>
         public bool HoleUp;
         float lastAt = -1e9f;
@@ -142,6 +148,12 @@ namespace Vig.Client
             {
                 dealerCards[i] = new Props.CardProp(root, "dealer card " + (i + 1));
                 for (int h = 0; h < 2; h++) handCards[h][i] = new Props.CardProp(root, $"hand {h + 1} card {i + 1}");
+                for (int r = 0; r < 2; r++) regCards[r][i] = new Props.CardProp(root, $"regular {r + 1} card {i + 1}");
+            }
+            for (int r = 0; r < 2; r++)
+            {
+                regStacks[r][0] = Props.Chips(root, "regular stake", Vector3.zero, r == 0 ? 6 : 3);
+                regStacks[r][1] = Props.Chips(root, "regular double", Vector3.zero, 6);
             }
             for (int h = 0; h < 2; h++)
             {
@@ -165,6 +177,19 @@ namespace Vig.Client
             public bool Hole;
             public int Active;
             public List<int> Bets;
+            /// <summary>the regulars' hands and stakes, by seat</summary>
+            public List<List<Card>> Regs = new List<List<Card>>();
+            public List<int> RegBets = new List<int>();
+        }
+
+        static void AddRegs(Target tg, List<RegularHand21> regs)
+        {
+            if (regs == null) return;
+            foreach (var r in regs.OrderBy(r => Regulars.ById(r.Who)?.Seat ?? 0))
+            {
+                tg.Regs.Add(r.Cards);
+                tg.RegBets.Add(r.Bet);
+            }
         }
 
         /// <summary>The cards heading for the cloth: the round in play (hole down), or the outcome.</summary>
@@ -172,9 +197,17 @@ namespace Vig.Client
         {
             var hand = t.Hand;
             if (hand != null && hand.Stage == "play")
-                return new Target { Hands = hand.Hands.Select(h => h.Cards).ToList(), Dealer = hand.Dealer, Hole = true, Active = hand.Active, Bets = hand.Hands.Select(h => h.Bet).ToList() };
+            {
+                var tg = new Target { Hands = hand.Hands.Select(h => h.Cards).ToList(), Dealer = hand.Dealer, Hole = true, Active = hand.Active, Bets = hand.Hands.Select(h => h.Bet).ToList() };
+                AddRegs(tg, hand.Regulars);
+                return tg;
+            }
             if (o?.Hands21 != null)
-                return new Target { Hands = o.Hands21.Select(h => h.Cards).ToList(), Dealer = o.Dealer21, Hole = false, Active = -1, Bets = o.Hands21.Select(h => h.Bet).ToList() };
+            {
+                var tg = new Target { Hands = o.Hands21.Select(h => h.Cards).ToList(), Dealer = o.Dealer21, Hole = false, Active = -1, Bets = o.Hands21.Select(h => h.Bet).ToList() };
+                AddRegs(tg, o.Regulars21);
+                return tg;
+            }
             return null;
         }
 
@@ -183,12 +216,44 @@ namespace Vig.Client
         /// <summary>How many of a hand's cards (or the dealer's) are down on the cloth yet.</summary>
         public int Shown(int hand, int all) => started ? Mathf.Min(all, Seen(hand)) : all;
         public int ShownDealer(int all) => started ? Mathf.Min(all, SeenD) : all;
+        public int ShownRegular(int seat, int all) => started ? Mathf.Min(all, SeenR[seat]) : all;
 
         /// <summary>Still bringing the cloth up to the round.</summary>
         public bool Dealing(TableState t)
         {
             var tg = TargetOf(t, t.Pending ?? t.Last);
-            return tg != null && (tg.Hands.Select((h, i) => Seen(i) < h.Count).Any(x => x) || SeenD < tg.Dealer.Count || !tg.Hole && !HoleUp);
+            return tg != null && (tg.Hands.Select((h, i) => Seen(i) < h.Count).Any(x => x) || tg.Regs.Select((r, i) => SeenR[i] < r.Count).Any(x => x)
+                || SeenD < tg.Dealer.Count || !tg.Hole && !HoleUp);
+        }
+
+        /// <summary>The order a dealer brings the cards out (rows: -1 the dealer, 0-1 your hands, 2-3 the
+        /// regulars by seat; FlipRow the hole card turning).</summary>
+        static IEnumerable<(int row, int idx)> Order(Target tg)
+        {
+            int nr = tg.Regs.Count;
+            for (int k = 0; k < 2; k++)
+            {
+                if (nr > 0) yield return (2, k);
+                yield return (0, k);
+                if (nr > 1) yield return (3, k);
+                yield return (-1, k);
+            }
+            if (nr > 0) for (int i = 2; i < tg.Regs[0].Count; i++) yield return (2, i);
+            for (int h = 0; h < tg.Hands.Count; h++) for (int i = 0; i < tg.Hands[h].Count; i++) yield return (h, i);
+            if (nr > 1) for (int i = 2; i < tg.Regs[1].Count; i++) yield return (3, i);
+            yield return (FlipRow, 0);
+            for (int i = 2; i < tg.Dealer.Count; i++) yield return (-1, i);
+        }
+
+        int SeenOf(int row) => row == -1 ? SeenD : row >= 2 ? SeenR[row - 2] : Seen(row);
+
+        static int CountOf(Target tg, int row) => row == -1 ? tg.Dealer.Count : row >= 2 ? (row - 2 < tg.Regs.Count ? tg.Regs[row - 2].Count : 0) : row < tg.Hands.Count ? tg.Hands[row].Count : 0;
+
+        void SetSeen(int row, int n)
+        {
+            if (row == -1) SeenD = n;
+            else if (row >= 2) SeenR[row - 2] = n;
+            else SeenH[row] = n;
         }
 
         /// <summary>One card at a time, the TS game's order: the deal goes you, dealer, you, dealer (face
@@ -205,6 +270,7 @@ namespace Vig.Client
                 SeenH.Clear();
                 if (tg != null) SeenH.AddRange(tg.Hands.Select(h => h.Count));
                 SeenD = tg?.Dealer.Count ?? 0;
+                for (int r = 0; r < 2; r++) SeenR[r] = tg != null && r < tg.Regs.Count ? tg.Regs[r].Count : 0;
                 HoleUp = tg != null && !tg.Hole;
             }
             else if (isLive && !live)
@@ -213,6 +279,7 @@ namespace Vig.Client
                 SeenH.Clear();
                 SeenH.Add(0);
                 SeenD = 0;
+                SeenR[0] = SeenR[1] = 0;
                 HoleUp = false;
                 lastAt = now - gap * 0.6f;
             }
@@ -226,30 +293,34 @@ namespace Vig.Client
                 for (int i = 0; i < tg.Hands.Count; i++) SeenH.Add(i == 0 ? first : 1);
             }
             if (now - lastAt < gap) return;
-            int h0 = Seen(0);
-            bool opening = tg.Hands.Count == 1 && (h0 < 2 || SeenD < 2);
-            int more = -1;
-            for (int i = 0; i < tg.Hands.Count; i++) if (Seen(i) < tg.Hands[i].Count) { more = i; break; }
-            if (opening && h0 <= SeenD && h0 < tg.Hands[0].Count) { SeenH[0] = h0 + 1; lastRow = 0; lastIdx = h0; }
-            else if (opening && SeenD < tg.Dealer.Count) { lastRow = -1; lastIdx = SeenD; SeenD++; }
-            else if (more >= 0) { lastRow = more; lastIdx = Seen(more); SeenH[more] = lastIdx + 1; }
-            else if (!tg.Hole && !HoleUp && SeenD >= 2)
+            // the next card in the dealer's order that isn't on the cloth yet
+            foreach (var (row, idx) in Order(tg))
             {
-                HoleUp = true;
+                if (row == FlipRow)
+                {
+                    if (tg.Hole || HoleUp || SeenD < 2) continue;
+                    HoleUp = true;
+                    lastAt = now;
+                    lastWasFlip = true;
+                    return;
+                }
+                if (idx != SeenOf(row) || idx >= CountOf(tg, row)) continue;
+                SetSeen(row, idx + 1);
+                lastRow = row;
+                lastIdx = idx;
                 lastAt = now;
-                lastWasFlip = true;
+                lastWasFlip = false;
                 return;
             }
-            else if (SeenD < tg.Dealer.Count) { lastRow = -1; lastIdx = SeenD; SeenD++; }
-            else return;
-            lastAt = now;
-            lastWasFlip = false;
         }
 
         Vector3 Slot(bool dealer, int hand, int i, int hands)
         {
             float y = FeltY + Props.CardT / 2 + i * 0.0005f;
             if (dealer) return new Vector3(-0.25f + i * 0.105f, y, 0.235f);
+            // the regulars' cards, fanned in front of their seats (first base on your right)
+            if (hand == 2) return new Vector3(0.64f + i * 0.06f, y, 0.0f);
+            if (hand == 3) return new Vector3(-0.94f + i * 0.06f, y, 0.0f);
             if (hands < 2) return new Vector3(-0.15f + i * 0.105f, y, 0.025f);
             return new Vector3((hand == 0 ? -0.5f : 0.06f) + i * 0.08f, y, 0.025f);
         }
@@ -265,6 +336,18 @@ namespace Vig.Client
             {
                 Pose(dealerCards[i], tg?.Dealer, i, SeenD, true, 0, hands, ago, gap);
                 for (int h = 0; h < 2; h++) Pose(handCards[h][i], h < hands ? tg.Hands[h] : null, i, Seen(h), false, h, hands, ago, gap);
+                for (int r = 0; r < 2; r++) Pose(regCards[r][i], tg != null && r < tg.Regs.Count ? tg.Regs[r] : null, i, SeenR[r], false, r + 2, hands, ago, gap);
+            }
+            // the regulars' stakes, a second stack when they doubled
+            for (int r = 0; r < 2; r++)
+            {
+                bool on = tg != null && r < tg.Regs.Count && SeenR[r] > 0;
+                var at = Slot(false, r + 2, 0, hands);
+                int regBase = Regulars.All.First(d => d.Seat == r).Mins * Vig.Sim.Data.Tables.LimitsOf(Vig.Sim.Data.Tables.ById("twentyone"), g.State.Floor).Min;
+                regStacks[r][0].gameObject.SetActive(on);
+                regStacks[r][1].gameObject.SetActive(on && tg.RegBets[r] > regBase);
+                regStacks[r][0].localPosition = new Vector3(at.x + 0.04f, FeltY, -0.12f);
+                regStacks[r][1].localPosition = new Vector3(at.x + 0.088f, FeltY, -0.12f);
             }
             // the stakes in front of each hand, a second stack when it doubled
             int baseBet = t.Hand?.Bet ?? (tg != null && tg.Bets.Count > 0 ? tg.Bets.Min() : 0);
@@ -289,6 +372,8 @@ namespace Vig.Client
             c.Visible(true);
             c.Show(cards[i]);
             var at = Slot(dealer, hand, i, hands);
+            // a regular's cards turn a little toward their seat
+            float yaw = dealer ? 0 : hand == 2 ? -14 : hand == 3 ? 14 : 0;
             bool hole = dealer && i == 1 && !HoleUp;
             bool newest = (dealer ? lastRow == -1 : lastRow == hand) && i == lastIdx && ago < gap && !lastWasFlip;
             if (dealer && i == 1 && HoleUp && lastWasFlip && ago < gap && shown == 2)
@@ -305,11 +390,11 @@ namespace Vig.Client
                 float k = Beats.Out3(ago / (gap * 0.7f));
                 c.T.localPosition = Vector3.Lerp(mouth, at, k) + Vector3.up * Mathf.Sin(k * Mathf.PI) * 0.03f;
                 float roll = hole || k < 0.8f ? 180 : 180 * (1 - (k - 0.8f) / 0.2f);
-                c.T.localRotation = Quaternion.Euler(0, (1 - k) * -30, roll);
+                c.T.localRotation = Quaternion.Euler(0, (1 - k) * -30 + k * yaw, roll);
                 return;
             }
             c.T.localPosition = at;
-            c.T.localRotation = Quaternion.Euler(0, 0, hole ? 180 : 0);
+            c.T.localRotation = Quaternion.Euler(0, yaw, hole ? 180 : 0);
         }
     }
 }

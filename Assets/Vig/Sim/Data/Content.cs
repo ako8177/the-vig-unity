@@ -238,6 +238,32 @@ namespace Vig.Sim.Data
         public const string BuzzDerivation = "DESIGN.md §10: buzz stacks to 180 s; 90 s of it is as drunk as the screen gets";
     }
 
+    // ------------------------------------------------------------------ the regulars at Twenty-One (U29)
+
+    public sealed class RegularDef
+    {
+        public string Id, Name, Style, Derivation;
+        /// <summary>0: first base (your right, played before you); 1: third base (your left, played after you)</summary>
+        public int Seat;
+        /// <summary>their stake, in the table's minimums</summary>
+        public int Mins;
+    }
+
+    public static class Regulars
+    {
+        /// <summary>Two players dealt from the same shoe as you. Their money is their own: it never touches
+        /// the bank, and taking cards from a shuffled shoe doesn't move your odds (DESIGN.md §13).</summary>
+        public static readonly RegularDef[] All =
+        {
+            new RegularDef { Id = "dot", Name = "Dot", Seat = 0, Style = "book", Mins = 2,
+                Derivation = "DESIGN.md §13: plays the book (the same basic strategy the printed RTP assumes), doubles, never splits (measured 0.989 over 100,000 hands, SimCheck)" },
+            new RegularDef { Id = "ike", Name = "Ike", Seat = 1, Style = "hunch", Mins = 1,
+                Derivation = "DESIGN.md §13: plays like the dealer (hits to 17, never doubles), the habit that gives back about 6.5% (measured 0.935 over 100,000 hands, SimCheck)" },
+        };
+        static readonly Dictionary<string, RegularDef> byId = All.ToDictionary(d => d.Id);
+        public static RegularDef ById(string id) => id != null && byId.TryGetValue(id, out var d) ? d : null;
+    }
+
     // ------------------------------------------------------------------ the Collectors (DECISIONS #81)
 
     public sealed class CollectorDef

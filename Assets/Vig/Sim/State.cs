@@ -88,6 +88,7 @@ namespace Vig.Sim
         public int? Slot;
         public List<HandResult> Hands21;
         public List<Card> Dealer21;
+        public List<RegularHand21> Regulars21;
         public int? Streak;
         /// <summary>Crash: the multiplier cashed at (or crashed at); Peg Drop: the ball's bounces (0 left, 1 right);
         /// Roulette: the pocket; Craps: the point the roll was against</summary>
@@ -129,10 +130,25 @@ namespace Vig.Sim
         public bool Aces;
     }
 
+    /// <summary>A regular's hand at Twenty-One (U29): dealt from your shoe, played their way, paid with their
+    /// own money (Ret is what the dealer handed back; never the bank's).</summary>
+    public sealed class RegularHand21
+    {
+        public string Who;
+        public List<Card> Cards;
+        public int Bet, Ret;
+        public bool Done;
+        public string Word;
+
+        public RegularHand21 Clone() => new RegularHand21 { Who = Who, Cards = Cards.Select(c => c.Clone()).ToList(), Bet = Bet, Ret = Ret, Done = Done, Word = Word };
+    }
+
     public sealed class Hand21
     {
         public int Bet;
         public List<PlayerHand21> Hands;
+        /// <summary>the regulars at the table, first base first</summary>
+        public List<RegularHand21> Regulars;
         public int Active;
         public List<Card> Dealer;
         /// <summary>play: your move; done: waiting for the result tick</summary>

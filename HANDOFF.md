@@ -17,7 +17,7 @@ usage limit before committing; their work was committed as it stood (people: U13
 
 ## Next (in order, unless the owner picks)
 
-1. **IDEAS.md's top table ideas**: side bets, NPC players at Twenty-One (dealt by the sim).
+1. **IDEAS.md's top table ideas**: side bets. (The Twenty-One regulars are in: U29.)
 2. **Floor 2's people**: dealers at roulette (spin the ball), craps (the stickman), a crowd that watches Crash.
 3. **The house's furniture** modelled in Blender (the couch, the TV, the car), the family's own look.
 4. A Collector of floor 2's own.

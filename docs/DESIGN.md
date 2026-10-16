@@ -434,3 +434,25 @@ run to the crash past 5x. The lessons checked on every run (SimCheck `lessons`):
 (and floor 2's night 4) at most 15%; the mid rotation makes night 1 at least 50%; on the easy curve it walks
 out at least 25%, on house rules at most 10%; the floor-2 rotation makes night 4 at least 40%; riding Crash
 to 10x costs more lives than cashing at 2x.
+
+## 13. The regulars at Twenty-One (U29)
+
+Two regulars are dealt from the same shoe, round the table with you: first base, you, third base, the
+dealer, twice (the dealer's second card face down). **Dot** (first base) plays basic strategy without
+splitting, doubling where it says to, and acts before you. **Ike** (third base) plays the dealer's own rule
+(hit to 17, never double) and acts after you. Nobody plays into a dealer natural. The dealer draws while any
+hand at the table still stands, so he may draw when you've busted or hit a natural: neither changes your
+result.
+
+**Your odds don't move.** The cards a regular takes are unseen draws from a shuffled shoe, so the card you
+get next is exactly as random as it was; the printed RTP (basic strategy, endless shoe, 0.992) still holds.
+SimCheck measures it (100,000 hands with them at the table, basic strategy): **0.992**, inside ±0.015 (four
+standard errors). Their stakes are their own (Dot 2× the table minimum, Ike 1×) and never touch the bank.
+
+**What they return** (the same 100,000 hands): Dot 0.989 (the book, less splits), Ike 0.935 (mimicking the
+dealer gives back about 6.5%: he busts first and is never paid 3:2 for it).
+
+**The bust card.** When you lose, the dealer made a hand, and Ike drew after you, the game checks whether
+Ike's last card would have busted the dealer had Ike stood (it would have been the dealer's next draw, every
+later draw one later). Only then does Dot say so. It's the oldest table superstition, and here it's true
+when it's said.

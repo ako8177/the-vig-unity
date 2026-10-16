@@ -344,6 +344,7 @@ static class Program
 
     static void RuleChecks()
     {
+        RegularsCheck(100000);
         // DECISIONS U5: a locked charm can't come off the Boon wheel; an unlocked one can
         var locked = BoonCharms(new string[0]);
         Check(locked.Count > 0, "rules: no spin landed on the Boon wheel's charm slot");
@@ -405,6 +406,52 @@ static class Program
         Check(Rate(mid2, Night1) >= 0.4, $"lesson 10: the floor-2 rotation makes night 4 {Rate(mid2, Night1):P0} (at least 40%)");
         Check(crash10.Average(r => r.TableLives) > crash2.Average(r => r.TableLives), "lesson 11: riding Crash to 10x costs more lives than cashing at 2x");
         Console.WriteLine($"ok   lessons: night 1 safe {Rate(safe1, Night1):P0} / mid {Rate(mid1, Night1):P0}; walks out easy {Rate(mid1, r => r.WalkedOut):P0} / house {Rate(midHouse, r => r.WalkedOut):P0}; floor 2 night 4 safe {Rate(safe2, Night1):P0} / mid {Rate(mid2, Night1):P0}; crash lives 2x {crash2.Average(r => r.TableLives):0.00} / 10x {crash10.Average(r => r.TableLives):0.00}");
+    }
+
+    /// <summary>U29: the regulars share your shoe but not your odds. Play `n` hands of basic strategy with them
+    /// at the table and measure your return against the exact one; report theirs (DESIGN.md §13).</summary>
+    static void RegularsCheck(int n)
+    {
+        var g = new Game(new GameOpts { Seed = 2910, Players = 1 });
+        var b = new Pace.Bot(g);
+        b.Sit("twentyone");
+        var t = g.State.Tables["twentyone"];
+        double bet = 0, ret = 0;
+        var rb = new Dictionary<string, double>(); var rr = new Dictionary<string, double>();
+        int hands = 0, dealerDrewForThem = 0;
+        while (hands < n)
+        {
+            g.State.Clock = State.NightTicks;
+            g.State.Bank = 1000000;
+            int before = t.Rounds;
+            g.Submit(0, Command.Bet("twentyone", b.Limit("twentyone", false))); g.Step();
+            for (int k = 0; k < 20 && t.Hand?.Stage == "play"; k++)
+            {
+                var h = t.Hand;
+                var can = TwentyOne.Options(h);
+                g.Submit(0, Command.CallIt("twentyone", TwentyOne.Advise(h.Hands[h.Active].Cards, TwentyOne.CardValue(h.Dealer[0]), can.dbl, can.split))); g.Step();
+            }
+            for (int k = 0; k < 2000 && t.Rounds == before; k++) g.Step();
+            g.DrainEvents();
+            var o = t.Last;
+            if (o == null || t.Rounds == before) { Check(false, "regulars: a hand never settled"); return; }
+            bet += o.Bet; ret += o.Ret; hands++;
+            bool youOut = o.Hands21.All(hr => TwentyOne.HandValue(hr.Cards).total > 21) || (o.Hands21.Count == 1 && TwentyOne.IsNatural(o.Hands21[0].Cards));
+            if (youOut && o.Dealer21.Count > 2) dealerDrewForThem++;
+            foreach (var r in o.Regulars21 ?? new List<RegularHand21>())
+            {
+                rb[r.Who] = (rb.TryGetValue(r.Who, out var x) ? x : 0) + r.Bet;
+                rr[r.Who] = (rr.TryGetValue(r.Who, out var y) ? y : 0) + r.Ret;
+            }
+        }
+        double rtp = ret / bet, exact = TwentyOne.ExactRtp();
+        // one hand's return has a spread of about 1.15 per $1; four standard errors either side
+        double tol = 4 * 1.15 / Math.Sqrt(n);
+        Check(Math.Abs(rtp - exact) < tol, $"regulars: your return with them at the table {rtp:0.000} is not the printed {exact:0.000} (±{tol:0.000})");
+        Check(rb.Count == Regulars.All.Length, "regulars: every regular played");
+        foreach (var d in Regulars.All) Check(Derived(d.Derivation), $"data: regular {d.Id} lacks a derivation");
+        Console.WriteLine($"ok   regulars: {n} hands, yours {rtp:0.000} (printed {exact:0.000} ±{tol:0.000}); " +
+            string.Join(", ", Regulars.All.Select(d => $"{d.Name} ({d.Style}) {rr[d.Id] / rb[d.Id]:0.000}")) + $"; the dealer drew for them {dealerDrewForThem} times");
     }
 
     // ------------------------------------------------------------------ data validation

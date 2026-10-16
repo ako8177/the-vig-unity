@@ -120,7 +120,7 @@ namespace Vig.Client
                     var v = TwentyOne.HandValue(cards);
                     sb.Append(i == h.Active ? "> " : "  ").Append(string.Join(" ", cards.Select(Card))).Append(cards.Count > 0 ? Ui.Col($"   {(v.soft ? "SOFT " : "")}{v.total}", Look.Brass) : "").Append('\n');
                 }
-                return $"<size=24>{sb}</size>";
+                return $"<size=24>{sb}</size>" + RegularsLine(h.Regulars, false);
             }
             if (t.Pending != null)
                 return Ui.Col(Id == "bandit" ? "THE REELS SPIN..." : Id == "wheel" ? "THE WHEEL TURNS..." : Id == "redline" || Id == "twentyone" ? "THE CARD TURNS..."
@@ -138,7 +138,25 @@ namespace Vig.Client
             else if (o.Card != null) face = Card(o.Card) + "  ";
             else if (o.Slot != null) face = Ui.Col(WheelOfMarks.Layout[o.Slot.Value].ToUpperInvariant(), WheelColor(WheelOfMarks.Layout[o.Slot.Value])) + "  ";
             else if (o.Dealer21 != null) face = $"<size=20>{Ui.Col("DEALER", Look.Smoke)} {string.Join(" ", o.Dealer21.Select(Card))}   {Ui.Col("YOU", Look.Smoke)} {string.Join(" / ", o.Hands21.Select(h => string.Join(" ", h.Cards.Select(Card))))}</size>\n";
-            return face + Ui.Col(o.Text, c);
+            return face + Ui.Col(o.Text, c) + (o.Regulars21 != null ? "\n" + RegularsLine(o.Regulars21, true) : "");
+        }
+
+        /// <summary>The regulars (U29) on one small line: their cards as far as they're dealt, or how they did.</summary>
+        string RegularsLine(List<RegularHand21> regs, bool done)
+        {
+            if (regs == null || regs.Count == 0) return "";
+            var parts = new List<string>();
+            foreach (var r in regs)
+            {
+                var def = Regulars.ById(r.Who);
+                if (def == null) continue;
+                var cards = done ? r.Cards : r.Cards.Take(Deal?.ShownRegular(def.Seat, r.Cards.Count) ?? r.Cards.Count).ToList();
+                if (cards.Count == 0) continue;
+                string tail = done ? Ui.Col(r.Word, r.Ret > r.Bet ? Look.LowHi : r.Ret == r.Bet ? Look.Bone : Look.Smoke)
+                    : Ui.Col(TwentyOne.HandValue(cards).total.ToString(), Look.Brass);
+                parts.Add($"{Ui.Col(def.Name.ToUpperInvariant(), Look.Gold)} {string.Join(" ", cards.Select(Card))} {tail}");
+            }
+            return parts.Count == 0 ? "" : $"<size=17>{string.Join("    ", parts)}</size>";
         }
 
         public static Color WheelColor(string c) =>

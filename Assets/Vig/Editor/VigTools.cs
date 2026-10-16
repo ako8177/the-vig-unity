@@ -235,6 +235,8 @@ namespace Vig.EditorTools
                 Run(play, 1);
                 Settle(play, "twentyone", 0.4f);
             }, true));
+            // the regulars (U29): over your shoulder, Dot at first base on your right, Ike at third on your left
+            list.Add(new Shot { Name = "48_twentyone_regulars", Eye = U(6.5, 2.05, 7.25), At = U(6.5, 0.85, 4.95) });
             var red = f.TableOf("redline");
             // Red Line: the riffle, the flip, and the third loss in a row
             list.Add(Seat("21_redline_shuffle", "redline", play =>

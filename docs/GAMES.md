@@ -21,6 +21,9 @@ You and the dealer get two cards; one of his is face down. Hit, stand, double (a
 cards, after a split too) or split a pair once (split aces get one card each). The dealer hits
 soft 17 and checks for blackjack first. A win pays 1:1, a natural 3:2, a tie pushes.
 Wins 43% of hands, pushes 9%. Returns $0.99 with perfect play.
+Two regulars share the shoe: **Dot** at first base (your right) plays the book and acts before you;
+**Ike** at third base (your left) plays a hunch (he hits to 17 like the dealer) and acts after you.
+Their money is their own, and the cards they take don't change your odds.
 
 ## The lounge: mid risk (yellow). Losing costs the bet and a mark.
 
