@@ -29,6 +29,7 @@ static class Program
         if (only == null || only == "golden") Golden(Path.Combine(root, "tools", "golden", "traces"));
         if (only == null || only == "replay") Replay();
         if (only == null || only == "data") DataChecks();
+        if (only == null || only == "rules") RuleChecks();
         Console.WriteLine($"{passes} passed, {failures} failed");
         return failures == 0 ? 0 : 1;
     }
@@ -169,6 +170,41 @@ static class Program
         Check(again.Hash() == g.Hash(), $"replay: hash {again.Hash()} != {g.Hash()}");
         Check(g.Log.Count > 100, "replay: the scripted night applied too few commands");
         Console.WriteLine($"ok   replay: {g.Log.Count} commands over {g.Tick} ticks reproduce hash {g.Hash()}");
+    }
+
+    // ------------------------------------------------------------------ rule checks
+
+    /// <summary>The Boon wheel's charm slot gives `charm` count of each charm over many spins, from
+    /// a player wearing two charms, with `unlocked` in the pool.</summary>
+    static Dictionary<string, int> BoonCharms(string[] unlocked)
+    {
+        var got = new Dictionary<string, int>();
+        for (uint seed = 1; seed <= 600; seed++)
+        {
+            var g = new Game(new GameOpts { Seed = seed, Unlocked = unlocked });
+            var s = g.State;
+            s.Players[0].Charms.AddRange(new[] { "luckyfuse", "overclock" });
+            s.Phase = Phase.Wheel;
+            s.Wheel = new WheelState { Kind = "boon" };
+            s.Summary = new NightSummary { How = "kept" };
+            g.Submit(0, Command.Fortune());
+            for (int k = 0; k < 400 && !s.Wheel.Applied; k++) g.Step();
+            if (s.Wheel.Slot != 3) continue;
+            var c = s.Players[0].Charms.Last();
+            got[c] = got.TryGetValue(c, out var n) ? n + 1 : 1;
+        }
+        return got;
+    }
+
+    static void RuleChecks()
+    {
+        // DECISIONS U5: a locked charm can't come off the Boon wheel; an unlocked one can
+        var locked = BoonCharms(new string[0]);
+        Check(locked.Count > 0, "rules: no spin landed on the Boon wheel's charm slot");
+        Check(!locked.ContainsKey("insulated"), $"rules: the Boon wheel gave the locked Insulated Kit {(locked.TryGetValue("insulated", out var n) ? n : 0)} times");
+        var open = BoonCharms(new[] { "insulated" });
+        Check(open.ContainsKey("insulated"), "rules: the Boon wheel never gives the Insulated Kit once it's unlocked");
+        Console.WriteLine($"ok   rules: Boon charm slot locked {string.Join(", ", locked.Select(kv => kv.Key + " " + kv.Value))}; unlocked {string.Join(", ", open.Select(kv => kv.Key + " " + kv.Value))}");
     }
 
     // ------------------------------------------------------------------ data validation

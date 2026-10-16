@@ -18,7 +18,6 @@ animations.
    `Look.Neon` and `Neon.Text`.
 2. Which comes next: the people (the Collector in his chair first), the table animations, the house,
    or sound?
-3. U5: fix the Boon wheel's locked-charm bug (here only, U11)?
 
 ## Next (in order, unless the owner picks)
 

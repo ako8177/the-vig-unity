@@ -12,7 +12,7 @@
 - **The checks** (`tools/SimCheck`, `dotnet run -c Release`): 16 golden traces from the TS sim match
   tick for tick (a one-number change is caught on the tick it lands); replay determinism; data
   validation (derivations, enumerated RTPs within 0.5%, the tier rule, cross-references, stand points
-  clear of colliders). 129 checks, all green.
+  clear of colliders); a rule check on the Boon wheel's locked charms (U12). 132 checks, all green.
 - **Floor 1 in the new look** (`Assets/Vig/Client`): the main floor (cream damask, the indigo
   medallion carpet, cream marble columns, chandeliers, banks of slot cabinets with reel windows and
   chaser bulbs, the carousel and its jackpot tower, the velvet-roped aisle and red runner, the bar

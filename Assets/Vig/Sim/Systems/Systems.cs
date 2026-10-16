@@ -566,10 +566,9 @@ namespace Vig.Sim.Systems
                     case "charm":
                     {
                         var p = CharmFor(g);
-                        // only from the pool: a locked charm can't come off the wheel either. (The TS sim
-                        // tests `!c.unlock`, which an unlock index of 0 passes: the Insulated Kit comes off the
-                        // wheel locked or not. Kept for parity until both are fixed: DECISIONS.md U5.)
-                        var free = p != null ? Charms.All.Where(c => !p.Charms.Contains(c.Id) && (c.Unlock == null || c.Unlock == 0 || s.Unlocked.Contains(c.Id))).ToList() : new List<CharmDef>();
+                        // only from the pool: a locked charm can't come off the wheel either (DECISIONS U5:
+                        // the TS sim let the Insulated Kit, unlock index 0, through)
+                        var free = p != null ? Charms.All.Where(c => !p.Charms.Contains(c.Id) && (c.Unlock == null || s.Unlocked.Contains(c.Id))).ToList() : new List<CharmDef>();
                         if (p != null && free.Count > 0)
                         {
                             var c = g.Rng.Pick(free);

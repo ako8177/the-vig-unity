@@ -51,3 +51,7 @@ Every decision with its reason. The TS game's log (#1-#87) is frozen in `docs/DE
   rules, and when a rule changes on purpose the affected traces are regenerated from the C# sim (a C#
   trace writer gets built the first time that's needed) with the reason written here. U5's bug is
   fixed here alone, with its traces regenerated. The repo is public: github.com/ako8177/the-vig-unity.
+- **U12 2026-10-15: U5 fixed** (owner: "fix"). The Boon wheel's charm slot now draws only from charms
+  with no unlock or an unlocked one; the Insulated Kit can't come off it before its Collector dies.
+  No golden trace ever landed on that slot with the Kit locked, so the traces are unchanged; a new
+  rule check in SimCheck spins the slot 600 times locked and unlocked (and fails with the bug put back).
