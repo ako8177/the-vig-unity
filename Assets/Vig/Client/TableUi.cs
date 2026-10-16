@@ -66,7 +66,7 @@ namespace Vig.Client
             collText = Ui.Text("collector", bar, "", 26, Color.white, TextAlignmentOptions.TopLeft, new Vector2(0, 0), new Vector2(0.5f, 1), new Vector2(36, 18), new Vector2(-20, -18));
 
             // let it ride: double or nothing on the win that just landed (U18)
-            ridePanel = Ui.Panel("ride", t, new Color(0.12f, 0.08f, 0.01f, 0.94f), new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(-420, 272), new Vector2(420, 408)).rectTransform;
+            ridePanel = Ui.Panel("ride", t, new Color(0.12f, 0.08f, 0.01f, 1f), new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(-420, 560), new Vector2(420, 696)).rectTransform;
             ridePanel.GetComponent<Image>().sprite = Ui.Round;
             ridePanel.GetComponent<Image>().type = Image.Type.Sliced;
             rideText = Ui.Text("ride text", ridePanel, "", 24, Look.Brass, TextAlignmentOptions.TopLeft, Vector2.zero, Vector2.one, new Vector2(24, 50), new Vector2(-300, -14), true);

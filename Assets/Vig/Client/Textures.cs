@@ -9,6 +9,13 @@ namespace Vig.Client
     public static class Textures
     {
         static readonly Dictionary<string, Texture2D> cache = new Dictionary<string, Texture2D>();
+        static readonly HashSet<string> linearKeys = new HashSet<string>();
+        /// <summary>true while the editor bakes them: draw every one, don't load the baked copy</summary>
+        public static bool Baking;
+        /// <summary>every texture drawn so far, and whether it's linear (a normal map): the editor saves them</summary>
+        public static IEnumerable<KeyValuePair<string, Texture2D>> Drawn => cache;
+        public static bool IsLinear(string key) => linearKeys.Contains(key);
+        public static void ClearCache() => cache.Clear();
 
         // ---------------------------------------------------------------- noise (tileable value noise)
 
@@ -53,6 +60,13 @@ namespace Vig.Client
         static Texture2D Make(string key, int size, Func<float, float, Color> px, bool linear = false)
         {
             if (cache.TryGetValue(key, out var t) && t) return t;
+            if (linear) linearKeys.Add(key);
+            // a build loads the copy the editor baked (drawing them all at load took most of a minute)
+            if (!Baking && !Application.isEditor)
+            {
+                var pre = Resources.Load<Texture2D>("VigTex/" + key);
+                if (pre) { cache[key] = pre; return pre; }
+            }
             t = new Texture2D(size, size, TextureFormat.RGBA32, true, linear) { name = key, wrapMode = TextureWrapMode.Repeat, filterMode = FilterMode.Trilinear, anisoLevel = 8 };
             var c = new Color32[size * size];
             for (int y = 0; y < size; y++)
@@ -68,6 +82,11 @@ namespace Vig.Client
         static Texture2D NormalFrom(string key, int size, Func<float, float, float> h, float strength)
         {
             if (cache.TryGetValue(key, out var t) && t) return t;
+            if (!Baking && !Application.isEditor)
+            {
+                var pre = Resources.Load<Texture2D>("VigTex/" + key);
+                if (pre) { linearKeys.Add(key); cache[key] = pre; return pre; }
+            }
             var hs = new float[size * size];
             for (int y = 0; y < size; y++)
                 for (int x = 0; x < size; x++)

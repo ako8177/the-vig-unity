@@ -4,7 +4,8 @@ Read this first, every session.
 
 ## Where things stand (2026-10-16)
 
-The big pass (DECISIONS U15-U25, PROGRESS.md) is in: clickable tables, real dice, floor 2 with four new
+The big pass (DECISIONS U15-U25, PROGRESS.md) is in, then the pace bots (U26), pause/settings/results and
+chips on the felt (U27), and a fast boot with working bloom in the build (U28). The big pass: clickable tables, real dice, floor 2 with four new
 games, the easy quota curve, ten new charms and a nightly catalogue, Let It Ride, the progressive, the
 house, a title screen, sound. The two sessions from 2026-10-15 (people, table animations) stopped on a
 usage limit before committing; their work was committed as it stood (people: U13, U14).
@@ -16,12 +17,10 @@ usage limit before committing; their work was committed as it stood (people: U13
 
 ## Next (in order, unless the owner picks)
 
-1. **Pace bots for the new run** (DESIGN.md §8): measure floor 2 and the easy curve; port the TS bots'
-   strategies to SimCheck and write the numbers into DESIGN.md.
-2. **IDEAS.md's top table ideas**: side bets, NPC players at Twenty-One (sim-dealt), 3D chips on the felt.
-3. **Floor 2's people**: dealers at roulette (spin the ball), craps (the stickman), a crowd that watches Crash.
-4. **The house's furniture** modelled in Blender (the couch, the TV, the car), the family's own look.
-5. Settings, pause, results screens.
+1. **IDEAS.md's top table ideas**: side bets, NPC players at Twenty-One (dealt by the sim).
+2. **Floor 2's people**: dealers at roulette (spin the ball), craps (the stickman), a crowd that watches Crash.
+3. **The house's furniture** modelled in Blender (the couch, the TV, the car), the family's own look.
+4. A Collector of floor 2's own.
 
 ## How to run
 
@@ -37,6 +36,11 @@ usage limit before committing; their work was committed as it stood (people: U13
 
 ## Gotchas
 
+- The build bakes procedural textures to `Assets/Vig/Resources/VigTex` (git-ignored) and the player loads
+  those; the editor always draws them fresh (U28). A new texture made through `Textures.Make` is baked
+  automatically if any world built during the bake uses it.
+- Keep URP's post-processing strip flags off (`UniversalRenderPipelineGlobalSettings.asset`): the volume
+  is made at runtime, so URP strips Bloom from builds otherwise.
 - `AssetDatabase.ImportPackage` is asynchronous: in batch mode it never finishes. TMP's essential
   resources were unpacked from the .unitypackage by hand and are committed (`Assets/TextMesh Pro`).
 - The TMP font (Liberation Sans) lacks the dice faces and the lightning bolt; `TableScreen.Glyph`

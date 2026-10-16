@@ -104,8 +104,28 @@ PixelLab spend: 0.
 
 **Not yet**
 
-- Pace bots for the new curve and floor 2 (DESIGN.md §8's measurements are floor 1's, ×1.5 curve).
 - Floor 2's crowd is floor 1's people at the new tables; the Collector is the same figure; dealers don't
   yet handle the new games' pieces.
 - The house's furniture is plain blocks; the family is the crowd's kit.
-- Settings and pause screens; a results screen after a run.
+
+## 2026-10-16: measured, paused, faster (U26-U28)
+
+**Done**
+
+- **The pace bots** (U26, `tools/SimCheck/Pace.cs`) play whole runs of both floors; the easy curve got a
+  $2,000 bank floor after they showed it wasn't easy. Night 1: safe-only 3%, mid rotation 68%. Walks out:
+  easy 39%, house rules 0%. Floor 2 night 4: mid 56%. All checks now (250 green).
+- **Pause and settings** (U27): Esc stops the night; mouse sensitivity, volume, music, kept between sessions.
+- **Results** (U27): the end of a run shows how far you got, what you won and lost, and your best night.
+- **Chips on the felt** (U27): your stake as a real stack; the payout drops in on a win, a loss is raked.
+- **Craps** shows the live point on its screen.
+- **Boot** (U28): about 1.3 s in the build (was over 90 s); bloom works in the build again.
+- Shots 45-47 (the chips, the pause menu, the results); the seated shots now place the toasts as the game
+  does, above the bar.
+
+**Not yet**
+
+- Floor 2's crowd is floor 1's people at the new tables; the Collector is the same figure; dealers don't
+  yet handle the new games' pieces.
+- The house's furniture is plain blocks; the family is the crowd's kit.
+- Side bets; NPC players at Twenty-One.

@@ -15,11 +15,12 @@ Open in Unity 6 (6000.6.5f1), open `Assets/Scenes/Floor1.unity`, press Play.
 
 | | |
 |---|---|
-| WASD, Shift, mouse | walk, run, look (click to capture the mouse, Esc to free it) |
+| WASD, Shift, mouse | walk, run, look (click to capture the mouse) |
 | E | sit at a table, use the computer / mailbox / car at home, call the night at the Collector's table |
 | Mouse, seated | chips build your bet; the table's buttons play it; LET IT RIDE after a win |
 | `[` `]`, X | the bet down / up, stand up (the table's own keys still work too) |
 | 1-4 | order a drink at the bar |
+| Esc | pause: settings (sensitivity, volume, music), quit to the title |
 
 The title screen sets the run: quotas (easy +$200 a night, or house rules x1.5), the floor to start
 on, and whether to start at the house.

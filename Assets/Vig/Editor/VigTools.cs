@@ -77,10 +77,57 @@ namespace Vig.EditorTools
             AssetDatabase.SaveAssets();
         }
 
+        /// <summary>Draw every procedural texture (both floors, the house) and save it to Resources/VigTex, where a
+        /// build loads it instead of drawing it at boot (U28). The editor always draws them fresh.</summary>
+        [MenuItem("Vig/Bake Textures")]
+        public static void BakeTextures()
+        {
+            EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            Textures.ClearCache();
+            Textures.Baking = true;
+            var go = new GameObject("Vig (bake)");
+            try
+            {
+                var play = go.AddComponent<Play>();
+                play.Boot(false);
+                play.NewRun(1, false, 2, "easy");
+                play.NewRun(1, true, 1, "easy");
+            }
+            finally { Textures.Baking = false; }
+            const string dir = "Assets/Vig/Resources/VigTex";
+            Directory.CreateDirectory(dir);
+            var saved = new List<(string key, bool linear)>();
+            foreach (var kv in Textures.Drawn.ToList())
+            {
+                if (!kv.Value || !kv.Value.isReadable) continue;
+                File.WriteAllBytes($"{dir}/{kv.Key}.png", kv.Value.EncodeToPNG());
+                saved.Add((kv.Key, Textures.IsLinear(kv.Key)));
+            }
+            UnityEngine.Object.DestroyImmediate(go);
+            Textures.ClearCache();
+            AssetDatabase.Refresh();
+            foreach (var (key, linear) in saved)
+            {
+                var imp = (TextureImporter)AssetImporter.GetAtPath($"{dir}/{key}.png");
+                imp.textureType = TextureImporterType.Default;
+                imp.sRGBTexture = !linear;
+                imp.mipmapEnabled = true;
+                imp.wrapMode = TextureWrapMode.Repeat;
+                imp.filterMode = FilterMode.Trilinear;
+                imp.anisoLevel = 8;
+                imp.maxTextureSize = 2048;
+                imp.textureCompression = TextureImporterCompression.CompressedHQ;
+                imp.SaveAndReimport();
+            }
+            Debug.Log($"Vig: baked {saved.Count} textures to {dir}");
+            EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+        }
+
         [MenuItem("Vig/Build Windows")]
         public static void BuildWindows()
         {
             Setup();
+            BakeTextures();
             var r = BuildPipeline.BuildPlayer(new[] { ScenePath }, "Builds/Windows/TheVig.exe", BuildTarget.StandaloneWindows64, BuildOptions.None);
             Debug.Log($"Vig: build {r.summary.result}, {r.summary.totalSize / (1024 * 1024)} MB, {r.summary.totalErrors} errors");
             if (Application.isBatchMode) EditorApplication.Exit(r.summary.result == UnityEditor.Build.Reporting.BuildResult.Succeeded ? 0 : 1);
@@ -356,6 +403,28 @@ namespace Vig.EditorTools
             list.Add(Seated("42_pegdrop_landed", "pegdrop", 140, play => { }));
             list.Add(Seated("43_crash_climbing", "crash", 150, play => play.G.Submit(0, Command.Spin("crash"))));
             list.Add(Seated("44_crash_after", "crash", 900, play => { }));
+            // your bet as chips on the felt (U27): the eye looks down at the near corner of the Hi-Lo table
+            var chipShot = Seated("45_hilo_chips", "hilo", 150, play => play.G.Submit(0, Command.CallIt("hilo", "hi")));
+            var sitHilo = chipShot.Before;
+            chipShot.Before = play =>
+            {
+                sitHilo(play);
+                var t = play.Room.Tables["hilo"];
+                var pl = f2.TableOf("hilo");
+                chipShot.At = t.TransformPoint(new Vector3(-0.2f, (float)pl.H, -(float)pl.D / 2 + 0.42f));
+            };
+            list.Add(chipShot);
+            list.Add(new Shot { Name = "46_pause", Eye = RoomBuilder.U(f2.Spawn.X, 1.6, f2.Spawn.Z), At = RoomBuilder.U(f2.Spawn.X, 1.5, f2.Spawn.Z) + new Vector3(0, 0, 5), Hud = true, Before = play => play.Pause.Show(true) });
+            list.Add(new Shot
+            {
+                Name = "47_results", Eye = RoomBuilder.U(f2.Spawn.X, 1.6, f2.Spawn.Z), At = RoomBuilder.U(f2.Spawn.X, 1.5, f2.Spawn.Z) + new Vector3(0, 0, 5), Hud = true,
+                Before = play =>
+                {
+                    play.Pause.Show(false);
+                    play.G.State.Result = new Done { Won = false, Why = "Night 5: $3,180 short of the Collector's $3,800, and no lives left to pay it with." };
+                    play.Results.Show(play.G);
+                }
+            });
             return list;
         }
 
@@ -452,6 +521,7 @@ namespace Vig.EditorTools
                     if (canvas == play.Hud.Canvas) canvas.enabled = s.Hud;
                 }
                 play.Hud.Refresh(play.G, 0);
+                play.Hud.BarUp(play.TableBar.Visible);
                 cam.transform.position = s.Eye;
                 cam.transform.rotation = Quaternion.LookRotation(s.At - s.Eye);
                 // the people, as far on as the sim (and glancing at this camera)

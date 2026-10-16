@@ -128,3 +128,16 @@ Every decision with its reason. The TS game's log (#1-#87) is frozen in `docs/DE
   $1,000 and the +$200 steps were noise next to that. The bank floor isn't on CLAUDE.md's "ask before"
   list; the quota curve (which is) is unchanged. With a $2,000 floor on the easy curve 39% walk out and night
   1 is untouched; house rules keep $1,000. The lessons are checks now (DESIGN.md §8b).
+- **U27 2026-10-16: Pause, settings, results, and your bet as chips on the felt.** Esc pauses the night (the
+  sim stops); settings are mouse sensitivity, volume and music, kept in PlayerPrefs. A run ends on a results
+  screen (the ending, the night reached, rounds and win rate, won/lost, biggest win, lives, marks, markers,
+  Collectors killed, your best night) with ANOTHER RUN and THE TITLE. At the tables whose pieces aren't
+  already the bet (Hi-Lo, the Wheel, Dead Man's Hand, roulette, craps, Crash) your stake is a stack of
+  chips in casino colors on the felt; a win's payout stack drops in beside it, a loss is raked away.
+  Presentation only. The craps screen shows the live point and what rides on it.
+- **U28 2026-10-16: The build loads baked textures, and keeps its post-processing.** Drawing every procedural
+  texture pixel by pixel at boot took over 90 s in the player (about 4 s in the editor). The build step now
+  draws them in the editor and saves them to `Resources/VigTex` (21 textures, git-ignored, rebuilt on every
+  build); the player loads those, and the editor always draws fresh, so a changed texture is never stale.
+  Boot is now about 1.3 s. URP's "strip unused post-processing variants" was removing the Bloom shader
+  from builds (the volume is made at runtime, so URP saw no use of it); both strip flags are off.

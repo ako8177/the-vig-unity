@@ -125,6 +125,9 @@ namespace Vig.Client
             if (t.Pending != null)
                 return Ui.Col(Id == "bandit" ? "THE REELS SPIN..." : Id == "wheel" ? "THE WHEEL TURNS..." : Id == "redline" || Id == "twentyone" ? "THE CARD TURNS..."
                     : Id == "roulette" ? "THE BALL RUNS..." : Id == "pegdrop" ? "THE BALL DROPS..." : Id == "crash" ? "..." : "THE DICE ROLL...", Look.Smoke);
+            // craps between throws: the point is on and the pass-line bet rides
+            if (Id == "craps" && t.Point != 0)
+                return Ui.Col($"THE POINT IS {t.Point}", Look.Gold) + "\n" + Ui.Col($"<size=24>{Ui.Money(t.PointBet)} RIDES: HIT IT AGAIN BEFORE A 7</size>", Look.Smoke);
             var o = t.Last;
             if (o == null) return Ui.Col("PLACE YOUR BET", Look.Smoke);
             Color c = o.Win ? Look.LowHi : o.LifeLost == true ? Look.Blood : Look.Bone;

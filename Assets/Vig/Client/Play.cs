@@ -21,6 +21,8 @@ namespace Vig.Client
         TableUi ui;
         TitleUi title;
         ShopUi shop;
+        PauseUi pause;
+        ResultsUi results;
         // the casino floor that's built (rebuilt on the stairs down), and the house
         Transform casinoRoot;
         int builtFloor;
@@ -29,6 +31,7 @@ namespace Vig.Client
         readonly Dictionary<string, TableScreen> screens = new Dictionary<string, TableScreen>();
         CollectorScreen collScreen;
         Dictionary<string, TableShow> shows = new Dictionary<string, TableShow>();
+        readonly Dictionary<string, BetChips> chips = new Dictionary<string, BetChips>();
         readonly List<(Light l, float i)> lights = new List<(Light, float)>();
         HouseBuilder house;
         People family;
@@ -46,6 +49,7 @@ namespace Vig.Client
         /// <summary>Build everything and start a run (also called by the screenshot tool, in edit mode).</summary>
         public void Boot(bool live)
         {
+            var clock = System.Diagnostics.Stopwatch.StartNew();
             Atmosphere.Setup(transform);
             cam = Atmosphere.MakeCamera(transform);
             Sfx.Init(transform);
@@ -54,14 +58,19 @@ namespace Vig.Client
             BuildCasino(1);
             house = HouseBuilder.Build(transform);
             family = People.BuildFamily(house.Root);
+            Debug.Log($"Vig: the worlds built in {clock.ElapsedMilliseconds} ms");
             hud = new Hud();
             ui = new TableUi(Send) { NewRun = () => { title.Show(true); paused = true; } };
             shop = new ShopUi(Send);
             title = new TitleUi(StartChosen);
+            Settings.Apply();
+            pause = new PauseUi(() => pause.Show(false), ShowTitle);
+            results = new ResultsUi(() => { results.Show(false); StartChosen(); }, ShowTitle);
             title.Show(live);
             paused = live;
             NewRun((uint)System.DateTime.Now.Ticks);
             SetWorld(true);
+            Debug.Log($"Vig: booted in {clock.ElapsedMilliseconds} ms");
         }
 
         /// <summary>PLAY on the title screen: a run on the chosen options.</summary>
@@ -73,6 +82,16 @@ namespace Vig.Client
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
             Sfx.Play("door");
+        }
+
+        /// <summary>Back to the title: the room turns behind it.</summary>
+        void ShowTitle()
+        {
+            pause.Show(false);
+            results.Show(false);
+            shop.Show(false);
+            title.Show(true);
+            paused = true;
         }
 
         public void NewRun(uint seed) => NewRun(seed, false, 1, "easy");
@@ -103,6 +122,7 @@ namespace Vig.Client
             screens.Clear();
             lights.Clear();
             builtFloor = floor;
+            var clock = System.Diagnostics.Stopwatch.StartNew();
             room = RoomBuilder.Build(casinoRoot, floor);
             people = People.Build(casinoRoot, floor);
             foreach (var kv in room.Screens)
@@ -111,12 +131,16 @@ namespace Vig.Client
                 screens[kv.Key] = new TableScreen(kv.Key, kv.Value, (float)pl.Screen.W, (float)pl.Screen.H);
             }
             shows = TableShow.Build(room);
+            chips.Clear();
+            foreach (var id in new[] { "hilo", "wheel", "deadman", "roulette", "craps", "crash" })
+                if (room.Tables.TryGetValue(id, out var tt)) chips[id] = new BetChips(id, tt, Layout.FloorOf(floor).TableOf(id));
             if (screens.TryGetValue("twentyone", out var t21) && shows.TryGetValue("twentyone", out var s21)) t21.Deal = (TwentyOneShow)s21;
             foreach (var l in room.Root.GetComponentsInChildren<Light>(true))
                 if (l.name != "flash") lights.Add((l, l.intensity));
             var cs = Layout.FloorOf(floor).Collector.Screen;
             collScreen = new CollectorScreen(room.CollectorScreen, (float)cs.W, (float)cs.H);
             lastRev = -1;
+            Debug.Log($"Vig: floor {floor} built in {clock.ElapsedMilliseconds} ms");
         }
 
         static void Kill(GameObject go)
@@ -153,6 +177,10 @@ namespace Vig.Client
             int i = System.Array.IndexOf(args, "-vigshot");
             if (i >= 0 && i + 1 < args.Length) selfShot = args[i + 1];
             if (G == null) Boot(selfShot == null);
+            // the self-test can start where it should look: `-vigstart home` or `-vigstart floor2`
+            int j = System.Array.IndexOf(args, "-vigstart");
+            if (selfShot != null && j >= 0 && j + 1 < args.Length)
+                NewRun(77, args[j + 1] == "home", args[j + 1] == "floor2" ? 2 : 1, "easy");
         }
 
         void LateUpdate()
@@ -165,7 +193,7 @@ namespace Vig.Client
 
         static Vector3 Eye(Vector3 sim) => RoomBuilder.U(sim.x, Layout.EyeH, sim.z);
 
-        bool MenuOpen => (title != null && title.Open) || (shop != null && shop.Open);
+        bool MenuOpen => (title != null && title.Open) || (shop != null && shop.Open) || (pause != null && pause.Open) || (results != null && results.Open);
 
         void Update()
         {
@@ -180,12 +208,13 @@ namespace Vig.Client
             hud.BarUp(ui.Visible);
             if (kb.escapeKey.wasPressedThisFrame)
             {
+                // Esc: close the catalogue, or pause (and unpause)
                 if (shop.Open) shop.Show(false);
-                Cursor.lockState = CursorLockMode.None;
-                Cursor.visible = true;
+                else if (!title.Open && !results.Open) pause.Show(!pause.Open);
             }
             if (free) { if (Cursor.lockState != CursorLockMode.None) { Cursor.lockState = CursorLockMode.None; Cursor.visible = true; } }
             else if (mouse != null && mouse.leftButton.wasPressedThisFrame && Cursor.lockState != CursorLockMode.Locked) { Cursor.lockState = CursorLockMode.Locked; Cursor.visible = false; }
+            if (pause.Open) { hud.Prompt(null); return; }
             if (paused)
             {
                 // the title: the room turns slowly behind it
@@ -200,7 +229,7 @@ namespace Vig.Client
             // look
             if (mouse != null && Cursor.lockState == CursorLockMode.Locked && !free)
             {
-                var d = mouse.delta.ReadValue() * 0.08f;
+                var d = mouse.delta.ReadValue() * 0.08f * Settings.Sensitivity;
                 yaw += d.x;
                 pitch = Mathf.Clamp(pitch - d.y, -80, 80);
             }
@@ -232,6 +261,8 @@ namespace Vig.Client
         {
             if (G == null || world == "home") return;
             foreach (var sh in shows.Values) sh.Update(G, G.Tick + alpha);
+            var me = G.State.Players[Me];
+            foreach (var kv in chips) kv.Value.Update(G, me, ui != null ? ui.Bet(kv.Key) : 0, (G.Tick + alpha) / State.TicksPerS);
         }
 
         void HomeView()
@@ -318,7 +349,7 @@ namespace Vig.Client
             }
             else if (s.Phase == Phase.Wheel && kb.spaceKey.wasPressedThisFrame) Send(Command.Fortune());
             else if (s.Phase == Phase.Summary && (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame)) Send(Command.Ready());
-            else if (s.Phase == Phase.Over && (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame)) { title.Show(true); paused = true; }
+            else if (s.Phase == Phase.Over && !results.Open) { hud.Clear(); results.Show(G); }
             hud.Prompt(prompt);
         }
 
@@ -593,6 +624,8 @@ namespace Vig.Client
         public People People => people;
         public TableUi TableBar => ui;
         public ShopUi Shop => shop;
+        public PauseUi Pause => pause;
+        public ResultsUi Results => results;
         public HouseBuilder House => house;
         public void Refresh()
         {
