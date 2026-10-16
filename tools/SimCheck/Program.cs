@@ -32,6 +32,8 @@ static class Program
         if (only == null || only == "replay") Replay();
         if (only == null || only == "data") DataChecks();
         if (only == null || only == "rules") RuleChecks();
+        if (only == "pace") PaceReport(args.Length > 1 ? int.Parse(args[1]) : 100);
+        if (only == null || only == "lessons") Lessons(100);
         Console.WriteLine($"{passes} passed, {failures} failed");
         return failures == 0 ? 0 : 1;
     }
@@ -349,6 +351,60 @@ static class Program
         var open = BoonCharms(new[] { "insulated" });
         Check(open.ContainsKey("insulated"), "rules: the Boon wheel never gives the Insulated Kit once it's unlocked");
         Console.WriteLine($"ok   rules: Boon charm slot locked {string.Join(", ", locked.Select(kv => kv.Key + " " + kv.Value))}; unlocked {string.Join(", ", open.Select(kv => kv.Key + " " + kv.Value))}");
+    }
+
+    // ------------------------------------------------------------------ the pace report (DESIGN.md §8)
+
+    static readonly uint[] PaceSeeds = Enumerable.Range(0, 400).Select(i => (uint)(1000 + i * 7919)).ToArray();
+
+    static void PaceReport(int n)
+    {
+        var seeds = PaceSeeds.Take(n).ToArray();
+        void Row(string name, Func<uint, Pace.Result> run)
+        {
+            var rs = seeds.Select(run).ToList();
+            double n1 = rs.Count(r => r.Made.Count > 0 && r.Made[0]) / (double)rs.Count;
+            double made = rs.Average(r => r.NightsMade);
+            double walk = rs.Count(r => r.WalkedOut) / (double)rs.Count;
+            double bank1 = rs.Where(r => r.BankAtMidnight.Count > 0).Average(r => r.BankAtMidnight[0]);
+            double lives = rs.Average(r => r.TableLives);
+            Console.WriteLine($"  {name,-34} first night made {n1,5:P0}   nights made {made,4:0.0}   walks out {walk,5:P0}   first-midnight bank ${bank1,6:0}   lives lost at tables {lives:0.00}");
+        }
+        foreach (var curve in new[] { "easy", "house" })
+        {
+            Console.WriteLine($"{curve} curve, a whole run from floor 1 ({n} seeds, always paying):");
+            Row("safe-only", sd => Pace.Run(sd, Pace.SafeOnly, curve));
+            Row("mid rotation", sd => Pace.Run(sd, Pace.MidRotation, curve));
+            Row("mid + high bursts when behind", sd => Pace.Run(sd, Pace.HighWhenBehind(), curve));
+        }
+        Console.WriteLine($"floor 2 alone, nights 4-6, easy curve ({n} seeds):");
+        Row("safe-only (roulette, craps)", sd => Pace.Run(sd, Pace.SafeOnly, "easy", 2, 3));
+        Row("mid rotation (hi-lo, peg drop)", sd => Pace.Run(sd, Pace.MidRotation, "easy", 2, 3));
+        Row("mid + crash bursts at 2x", sd => Pace.Run(sd, Pace.HighWhenBehind(), "easy", 2, 3));
+        foreach (var x in new[] { 1.5, 2.0, 3.0, 5.0, 10.0 }) Row($"crash only, auto at {x}x", sd => Pace.Run(sd, Pace.CrashAt(x), "easy", 2, 3));
+    }
+
+    /// <summary>The lessons the numbers must keep teaching (DESIGN.md §8), on 100 seeds.</summary>
+    static void Lessons(int n)
+    {
+        var seeds = PaceSeeds.Take(n).ToArray();
+        double Rate(IEnumerable<Pace.Result> rs, Func<Pace.Result, bool> f) { var l = rs.ToList(); return l.Count(f) / (double)l.Count; }
+        bool Night1(Pace.Result r) => r.Made.Count > 0 && r.Made[0];
+        var safe1 = seeds.Select(sd => Pace.Run(sd, Pace.SafeOnly, "easy", 1, 1)).ToList();
+        var mid1 = seeds.Select(sd => Pace.Run(sd, Pace.MidRotation, "easy")).ToList();
+        var midHouse = seeds.Select(sd => Pace.Run(sd, Pace.MidRotation, "house")).ToList();
+        var safe2 = seeds.Select(sd => Pace.Run(sd, Pace.SafeOnly, "easy", 2, 1)).ToList();
+        var mid2 = seeds.Select(sd => Pace.Run(sd, Pace.MidRotation, "easy", 2, 3)).ToList();
+        var crash2 = seeds.Select(sd => Pace.Run(sd, Pace.CrashAt(2), "easy", 2, 3)).ToList();
+        var crash10 = seeds.Select(sd => Pace.Run(sd, Pace.CrashAt(10), "easy", 2, 3)).ToList();
+        Check(Rate(safe1, Night1) <= 0.15, $"lesson 1: safe-only makes night 1 {Rate(safe1, Night1):P0} (at most 15%)");
+        Check(Rate(safe2, Night1) <= 0.15, $"lesson 1b: safe-only makes night 4 on floor 2 {Rate(safe2, Night1):P0} (at most 15%)");
+        Check(Rate(mid1, Night1) >= 0.5, $"lesson 2: the mid rotation makes night 1 {Rate(mid1, Night1):P0} (at least 50%)");
+        Check(Rate(mid1, r => r.WalkedOut) >= 0.25, $"lesson 8 (U26): on the easy curve the mid rotation walks out of the run {Rate(mid1, r => r.WalkedOut):P0} (at least 25%)");
+        Check(Rate(midHouse, r => r.WalkedOut) <= 0.1, $"lesson 9: on house rules the mid rotation alone walks out {Rate(midHouse, r => r.WalkedOut):P0} (at most 10%: the curve forces blood)");
+        Check(Rate(mid2, Night1) >= 0.4, $"lesson 10: the floor-2 rotation makes night 4 {Rate(mid2, Night1):P0} (at least 40%)");
+        Check(crash10.Average(r => r.TableLives) > crash2.Average(r => r.TableLives), "lesson 11: riding Crash to 10x costs more lives than cashing at 2x");
+        Console.WriteLine($"ok   lessons: night 1 safe {Rate(safe1, Night1):P0} / mid {Rate(mid1, Night1):P0}; walks out easy {Rate(mid1, r => r.WalkedOut):P0} / house {Rate(midHouse, r => r.WalkedOut):P0}; floor 2 night 4 safe {Rate(safe2, Night1):P0} / mid {Rate(mid2, Night1):P0}; crash lives 2x {crash2.Average(r => r.TableLives):0.00} / 10x {crash10.Average(r => r.TableLives):0.00}");
     }
 
     // ------------------------------------------------------------------ data validation

@@ -878,7 +878,7 @@ namespace Vig.Sim.Systems
             var sum = s.Summary;
             s.Night++;
             s.Quota = sum.NextQuota;
-            s.Bank = Math.Max(s.Bank, Economy.BankFloor.I) + (s.Upgrades.Contains("bank500") ? 500 : 0) - s.NextDock;
+            s.Bank = Math.Max(s.Bank, s.Curve == "house" ? Economy.BankFloor.I : Economy.EasyBankFloor.I) + (s.Upgrades.Contains("bank500") ? 500 : 0) - s.NextDock;
             s.NextDock = 0;
             // Compound Interest, once for the team (DESIGN.md §12)
             if (s.Players.Any(p => !p.Ghost && p.Charms.Contains("interest")))

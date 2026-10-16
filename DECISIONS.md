@@ -122,3 +122,9 @@ Every decision with its reason. The TS game's log (#1-#87) is frozen in `docs/DE
   Real machines fake both; the not-list's "no odds hidden" extends to "no feelings faked".
 - **U25 2026-10-16: The Bandit's progressive**: 2% of every pull feeds a pot ($5,000 a floor to start),
   the whole grid alike takes it; it glows on the carousel's tower. RTP effect under 0.001 (DESIGN.md §12).
+- **U26 2026-10-16: The easy curve gets a $2,000 bank floor, and the run's balance is measured.** The pace
+  bots (TS tests/bots.ts) are ported to C# and play the run of two floors (`tools/SimCheck/Pace.cs`). They
+  showed the easy curve wasn't: 10% of sensible runs walked out, because each paid night reset the bank to
+  $1,000 and the +$200 steps were noise next to that. The bank floor isn't on CLAUDE.md's "ask before"
+  list; the quota curve (which is) is unchanged. With a $2,000 floor on the easy curve 39% walk out and night
+  1 is untouched; house rules keep $1,000. The lessons are checks now (DESIGN.md §8b).

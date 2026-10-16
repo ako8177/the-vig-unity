@@ -33,6 +33,13 @@ escalation that made nights 2-3 force blood. That's deliberate while the owner t
 when the run is balanced again, the curve between the two is the owner's to pick (CLAUDE.md, "ask
 before").
 
+**The easy curve's bank floor (U26): $2,000.** Measured (§8, 100 seeds, a sensible mid rotation that
+always pays): with the old $1,000 floor the easy curve let only **10%** of runs walk out of all six nights,
+because after paying, the bank fell back to $1,000 and each night asked +$2,200 or more from scratch: the
++$200 steps barely mattered. With a $2,000 floor the night after a paid quota asks about +$1,200 and **39%**
+of runs walk out (42% with high-table bursts when behind), while night 1 is untouched (68% made; safe-only
+3%). House rules keep the $1,000 floor and the ×1.5 curve: nobody walks out on the mid rotation alone.
+
 Night 1 **$3,000**, then ×1.5: $4,500, $6,750, $10,125… Start bank **$1,500** (DECISIONS #40;
 it was $1,000, and the pace bots went broke before the night's drift could show). A lost
 Collector gamble adds a random +10–40% on top of the ×1.5 for the next night. Shortfall:
@@ -405,3 +412,25 @@ The odds are printed on the offer.
 the whole grid alike (about 1 in 52,000 pulls) pays its 50x plus the pot. A run sees a few hundred pulls,
 so the pot grows by a few hundred dollars and is won almost never: it is there to be looked at, glowing on
 the carousel's tower, and it changes the Bandit's RTP by under 0.001.
+
+
+## 8b. The run of two floors, measured (U26; tools/SimCheck `pace`, `lessons`)
+
+The TS bots ported to C# (`tools/SimCheck/Pace.cs`): they sprint to a table, play each round at its
+pace, and always pay the Collector. 100 seeds, 2026-10-16:
+
+| Strategy | Night 1 made | Nights made of 6 | Walks out | Lives lost at tables |
+|---|---|---|---|---|
+| Easy curve: safe-only (Bandit, Twenty-One / roulette, craps at minimum) | 3% | 0.1 | 0% | 0 |
+| Easy curve: mid rotation (Hi-Lo bursts; the Wheel / Peg Drop while marked) | 68% | 3.4 | 39% | 0 |
+| Easy curve: mid + high bursts when behind | 68% | 3.4 | 42% | 0.21 |
+| House rules: mid rotation | 68% | 1.1 | 0% | 0 |
+| House rules: mid + high bursts | 68% | 1.3 | 0% | 0.39 |
+
+Floor 2 alone (nights 4-6, from a $1,500 bank, stakes ×2): safe-only (roulette red, craps) 0% of night 4;
+the floor-2 rotation (Hi-Lo, Peg Drop) 56%, walking out 70%; Crash alone at an auto cash-out 1.5x-5x makes
+night 4 25-31% (its rounds are long and the stake is a third of the bank) and at 10x 10%, losing 0.32 lives a
+run to the crash past 5x. The lessons checked on every run (SimCheck `lessons`): safe-only makes night 1
+(and floor 2's night 4) at most 15%; the mid rotation makes night 1 at least 50%; on the easy curve it walks
+out at least 25%, on house rules at most 10%; the floor-2 rotation makes night 4 at least 40%; riding Crash
+to 10x costs more lives than cashing at 2x.

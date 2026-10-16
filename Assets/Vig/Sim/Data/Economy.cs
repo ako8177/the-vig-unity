@@ -22,6 +22,7 @@ namespace Vig.Sim.Data
         public static readonly Num QuotaStep = new Num(200, "DESIGN.md §2 (U15, the owner's call): the easy curve, the quota +$200 each night");
         public static readonly Num StartBank = new Num(1500, "DESIGN.md §2: start bank $1,500 (DECISIONS #40: $1,000 went broke on 42% of mid rotations)");
         public static readonly Num BankFloor = new Num(1000, "DESIGN.md §2 (DECISIONS #10): the bank carries over with a $1,000 floor");
+        public static readonly Num EasyBankFloor = new Num(2000, "DESIGN.md §2 (U26): on the easy curve the bank's floor is $2,000, so a sensible player reaches floor 2 (measured, §8)");
         public static readonly Num ShortfallPerLife = new Num(2000, "DESIGN.md §2: one life per $2,000 short, rounded up (DECISIONS #55)");
         public static readonly Num OvershootPerMarker = new Num(500, "DESIGN.md §2: 1 marker per $500 over quota");
         public static readonly Num StartLives = new Num(3, "DESIGN.md §1: 3 lives per player (PLAN.md currencies)");
@@ -43,7 +44,7 @@ namespace Vig.Sim.Data
         {
             NightS, Nights, Quota1, QuotaGrowth, StartBank, BankFloor, ShortfallPerLife, OvershootPerMarker,
             StartLives, StartMarkers, MaxLives, CharmSlots, BuybackShare, MarkersRedline, MarkersDeadman,
-            NightsPerFloor, Floors, QuotaStep, MarkersCrash, PotSeed, PotShare, ShopSize, RerollCost, RideMax, RideS,
+            NightsPerFloor, Floors, QuotaStep, EasyBankFloor, MarkersCrash, PotSeed, PotShare, ShopSize, RerollCost, RideMax, RideS,
         };
     }
 }
