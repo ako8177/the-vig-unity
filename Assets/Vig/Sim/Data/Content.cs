@@ -238,6 +238,45 @@ namespace Vig.Sim.Data
         public const string BuzzDerivation = "DESIGN.md §10: buzz stacks to 180 s; 90 s of it is as drunk as the screen gets";
     }
 
+    // ------------------------------------------------------------------ side bets (U30)
+
+    public sealed class SideBetDef
+    {
+        public string Id, Table, Name, Text, Derivation;
+        /// <summary>its stake, in the table's minimums</summary>
+        public int Mins;
+        /// <summary>what each pair pays, to one: any pair, a pair of one color, a pair of one suit</summary>
+        public double Mixed, Colored, Suited;
+    }
+
+    public static class SideBets
+    {
+        /// <summary>Twenty-One's PAIRS: your first two cards make a pair (DESIGN.md §14).</summary>
+        public static readonly SideBetDef Pairs = new SideBetDef
+        {
+            Id = "pairs", Table = "twentyone", Name = "Pairs", Mins = 1, Mixed = 6, Colored = 12, Suited = 25,
+            Text = "YOUR FIRST TWO CARDS A PAIR",
+            Derivation = "DESIGN.md §14: from a fresh six-deck shoe the second card matches the first's rank 23 times in 311 (5 of its suit, 6 of its color's other suit, 12 of the other color); 6/12/25 to one returns 0.939, a low table's slow loss",
+        };
+
+        // the second card, from a fresh six-deck shoe with the first card out: 311 left
+        const double Left = 6 * 52 - 1, SameSuit = 6 - 1, SameColor = 6, OtherColor = 12;
+
+        public static double WinP(SideBetDef d) => (SameSuit + SameColor + OtherColor) / Left;
+
+        public static double ExactRtp(SideBetDef d) => ((d.Suited + 1) * SameSuit + (d.Colored + 1) * SameColor + (d.Mixed + 1) * OtherColor) / Left;
+
+        /// <summary>Your first two cards against the side bet: what it calls them and what it pays to one (0: no pair).
+        /// Suits 0-1 are red, 2-3 black.</summary>
+        public static (string word, double pays) Judge(SideBetDef d, Card a, Card b)
+        {
+            if (a.R != b.R) return ("NO PAIR", 0);
+            if (a.S == b.S) return ("SUITED PAIR", d.Suited);
+            if (a.S < 2 == b.S < 2) return ("COLOR PAIR", d.Colored);
+            return ("PAIR", d.Mixed);
+        }
+    }
+
     // ------------------------------------------------------------------ the regulars at Twenty-One (U29)
 
     public sealed class RegularDef

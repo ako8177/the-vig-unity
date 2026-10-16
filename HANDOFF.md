@@ -17,7 +17,8 @@ usage limit before committing; their work was committed as it stood (people: U13
 
 ## Next (in order, unless the owner picks)
 
-1. **IDEAS.md's top table ideas**: side bets. (The Twenty-One regulars are in: U29.)
+1. **More side bets** where they fit (craps' one-roll bets, a roulette straight-up already exists). PAIRS at
+   Twenty-One is in (U30), and the regulars (U29).
 2. **Floor 2's people**: dealers at roulette (spin the ball), craps (the stickman), a crowd that watches Crash.
 3. **The house's furniture** modelled in Blender (the couch, the TV, the car), the family's own look.
 4. A Collector of floor 2's own.

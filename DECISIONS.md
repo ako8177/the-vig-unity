@@ -148,3 +148,8 @@ Every decision with its reason. The TS game's log (#1-#87) is frozen in `docs/DE
   bust card, and Dot only says so when it's true. Golden traces regenerated (U11): the regulars draw from the
   shoe. Not derivative: blackjack with other players is the casino's own; the names, lines and the rule that
   the superstition is checked are ours.
+- **U30 2026-10-16: Side bets begin with PAIRS at Twenty-One.** A toggle beside DEAL puts the table minimum on
+  your first two cards making a pair: 6:1 any, 12:1 one color, 25:1 one suit; returns 0.939 (DESIGN.md §14), so
+  it's a low table's slow loss and its odds are printed on the screen and on the toggle. Judged on the deal,
+  paid when the hand lands. Flag: a pair side bet with a three-step paytable is a real casino bet (not from a
+  shipped game); the pays here are derived from our six-deck shoe and the tier rule, not copied.

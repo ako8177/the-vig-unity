@@ -251,7 +251,7 @@ static class Program
                                     case "hilo": c = Command.CallIt(id, d.Pick(new[] { "hi", "lo" }), amt); break;
                                     case "redline": c = Command.CallIt(id, d.Pick(new[] { "red", "black" }), amt); break;
                                     case "roulette": c = Command.CallIt(id, d.Pick(new[] { "red", "black", "odd", "even", "low", "high", "d1", "d2", "d3", "n0", "n17", "n36", "bogus" }), amt); break;
-                                    case "twentyone": c = s.Tables[id].Hand?.Stage == "play" ? Command.CallIt(id, d.Pick(new[] { "hit", "stand", "double", "split" })) : Command.Bet(id, amt); break;
+                                    case "twentyone": c = s.Tables[id].Hand?.Stage == "play" ? Command.CallIt(id, d.Pick(new[] { "hit", "stand", "double", "split" })) : new Command { T = "bet", Table = id, Amount = amt, Call = d.Next() < 0.3 ? "pairs" : null }; break;
                                     case "crash": c = s.Tables[id].Crash != null ? Command.CallIt(id, "cash") : new Command { T = "spin", Table = id, Amount = amt, Call = d.Next() < 0.5 ? "3" : null }; break;
                                     default: c = Command.Spin(id, amt); break;
                                 }
@@ -416,7 +416,7 @@ static class Program
         var b = new Pace.Bot(g);
         b.Sit("twentyone");
         var t = g.State.Tables["twentyone"];
-        double bet = 0, ret = 0;
+        double bet = 0, ret = 0, sideBet = 0, sideRet = 0;
         var rb = new Dictionary<string, double>(); var rr = new Dictionary<string, double>();
         int hands = 0, dealerDrewForThem = 0;
         while (hands < n)
@@ -424,7 +424,8 @@ static class Program
             g.State.Clock = State.NightTicks;
             g.State.Bank = 1000000;
             int before = t.Rounds;
-            g.Submit(0, Command.Bet("twentyone", b.Limit("twentyone", false))); g.Step();
+            g.Submit(0, new Command { T = "bet", Table = "twentyone", Amount = b.Limit("twentyone", false), Call = "pairs" }); g.Step();
+            sideBet += t.Hand.Side; sideRet += t.Hand.SideRet;
             for (int k = 0; k < 20 && t.Hand?.Stage == "play"; k++)
             {
                 var h = t.Hand;
@@ -435,7 +436,7 @@ static class Program
             g.DrainEvents();
             var o = t.Last;
             if (o == null || t.Rounds == before) { Check(false, "regulars: a hand never settled"); return; }
-            bet += o.Bet; ret += o.Ret; hands++;
+            bet += o.Hands21.Sum(hr => hr.Bet); ret += o.Hands21.Sum(hr => hr.Ret); hands++;
             bool youOut = o.Hands21.All(hr => TwentyOne.HandValue(hr.Cards).total > 21) || (o.Hands21.Count == 1 && TwentyOne.IsNatural(o.Hands21[0].Cards));
             if (youOut && o.Dealer21.Count > 2) dealerDrewForThem++;
             foreach (var r in o.Regulars21 ?? new List<RegularHand21>())
@@ -450,6 +451,12 @@ static class Program
         Check(Math.Abs(rtp - exact) < tol, $"regulars: your return with them at the table {rtp:0.000} is not the printed {exact:0.000} (±{tol:0.000})");
         Check(rb.Count == Regulars.All.Length, "regulars: every regular played");
         foreach (var d in Regulars.All) Check(Derived(d.Derivation), $"data: regular {d.Id} lacks a derivation");
+        // U30: PAIRS, measured on the same hands (one bet's spread is about 4 per $1)
+        double side = sideRet / sideBet, sideExact = SideBets.ExactRtp(SideBets.Pairs), sideTol = 4 * 4.0 / Math.Sqrt(n);
+        Check(Derived(SideBets.Pairs.Derivation), "data: the PAIRS side bet lacks a derivation");
+        Check(sideExact < 1, $"data: PAIRS returns {sideExact:0.000}: a side bet at a low table must be a slow loss");
+        Check(Math.Abs(side - sideExact) < sideTol, $"side bet: PAIRS returned {side:0.000} over {n} hands, not the printed {sideExact:0.000} (±{sideTol:0.000})");
+        Console.WriteLine($"ok   side bet: PAIRS {side:0.000} over {n} hands (printed {sideExact:0.000} ±{sideTol:0.000}, wins {SideBets.WinP(SideBets.Pairs):P1})");
         Console.WriteLine($"ok   regulars: {n} hands, yours {rtp:0.000} (printed {exact:0.000} ±{tol:0.000}); " +
             string.Join(", ", Regulars.All.Select(d => $"{d.Name} ({d.Style}) {rr[d.Id] / rb[d.Id]:0.000}")) + $"; the dealer drew for them {dealerDrewForThem} times");
     }

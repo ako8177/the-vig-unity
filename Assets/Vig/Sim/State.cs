@@ -149,6 +149,9 @@ namespace Vig.Sim
         public List<PlayerHand21> Hands;
         /// <summary>the regulars at the table, first base first</summary>
         public List<RegularHand21> Regulars;
+        /// <summary>the PAIRS side bet (U30): its stake, what it returns (judged on the deal, paid at the settle)</summary>
+        public int Side, SideRet;
+        public string SideWord;
         public int Active;
         public List<Card> Dealer;
         /// <summary>play: your move; done: waiting for the result tick</summary>

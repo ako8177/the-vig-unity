@@ -33,6 +33,8 @@ namespace Vig.Client
         string mode;
         string rouletteCall = "red";
         int crashAuto;
+        /// <summary>the PAIRS side bet rides with each deal (U30)</summary>
+        bool sidePairs;
         static readonly double[] AutoSteps = { 0, 1.5, 2, 3, 5, 10 };
         int dismissedRide = -1;
         public bool Visible { get; private set; }
@@ -176,7 +178,8 @@ namespace Vig.Client
                     Action("black", "BLACK", new Color(0.08f, 0.08f, 0.1f), () => send(Command.CallIt(table, "black", Bet(table))), 1, 2, 36);
                     break;
                 case "twentyone":
-                    Action("deal", "DEAL", Tint(tc, 0.35f), () => send(Command.Bet(table, Bet(table))), 0, 4, 32);
+                    Action("deal", "DEAL", Tint(tc, 0.35f), () => send(new Command { T = "bet", Table = table, Amount = Bet(table), Call = sidePairs ? SideBets.Pairs.Id : null }), 0, 4, 32);
+                    Action("pairs", "", Btn, () => sidePairs = !sidePairs, 1, 4, 20);
                     Action("hit", "HIT", Btn, () => send(Command.CallIt(table, "hit")), 0, 4);
                     Action("stand", "STAND", Btn, () => send(Command.CallIt(table, "stand")), 1, 4);
                     Action("double", "DOUBLE", Btn, () => send(Command.CallIt(table, "double")), 2, 4);
@@ -312,6 +315,13 @@ namespace Vig.Client
                     (bool dbl, bool split) o = play ? TwentyOne.Options(t.Hand) : (false, false);
                     named["deal"].gameObject.SetActive(!play);
                     named["deal"].interactable = !busy && canBet;
+                    // the side bet: on or off, its price and pays printed on the button
+                    var sbd = SideBets.Pairs;
+                    int sideAmt = sbd.Mins * Vig.Sim.Data.Tables.LimitsOf(Vig.Sim.Data.Tables.ById(seat), s.Floor).Min;
+                    named["pairs"].gameObject.SetActive(!play);
+                    named["pairs"].interactable = !busy;
+                    named["pairs"].image.color = sidePairs ? new Color(0.55f, 0.42f, 0.08f) : Btn;
+                    Ui.Label(named["pairs"], (sidePairs ? "PAIRS: ON  +" : "PAIRS: OFF  ") + Ui.Money(sideAmt) + $"\n<size=15>{sbd.Mixed}:1 · {sbd.Colored}:1 · {sbd.Suited}:1</size>");
                     foreach (var k in new[] { "hit", "stand", "double", "split" }) named[k].gameObject.SetActive(play);
                     named["double"].interactable = o.dbl && s.Bank >= t.Hand?.Hands[t.Hand.Active].Bet;
                     named["split"].interactable = o.split && s.Bank >= t.Hand?.Hands[t.Hand.Active].Bet;

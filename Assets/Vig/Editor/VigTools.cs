@@ -212,7 +212,7 @@ namespace Vig.EditorTools
             {
                 SitAt(play, "twentyone");
                 Topup(play.G);
-                play.G.Submit(0, Command.Bet("twentyone"));
+                play.G.Submit(0, new Command { T = "bet", Table = "twentyone", Call = "pairs" });
                 Run(play, (int)(Feel.DealGap * 60 * 1.75));
             }));
             list.Add(new Shot
@@ -224,7 +224,8 @@ namespace Vig.EditorTools
                     // deal until a hand is in play (a natural settles at once)
                     for (int i = 0; i < 10 && play.G.State.Tables["twentyone"].Hand?.Stage != "play"; i++)
                     {
-                        play.G.Submit(0, Command.Bet("twentyone"));
+                        // with the PAIRS side bet riding (U30)
+                        play.G.Submit(0, new Command { T = "bet", Table = "twentyone", Call = "pairs" });
                         Run(play, 240);
                     }
                 },

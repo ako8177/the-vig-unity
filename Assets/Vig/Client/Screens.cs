@@ -78,6 +78,11 @@ namespace Vig.Client
                 var o = mod.Odds();
                 odds.text = $"{Ui.Col("WIN", Look.Smoke)} {Ui.Col(Pct(o.WinP), tc)}    {Ui.Col("PAYS", Look.Smoke)} {def.PaysText}    {Ui.Col("RTP", Look.Smoke)} {o.Rtp:0.###}\n" +
                     $"{Ui.Col("LOSING COSTS", Look.Smoke)}  {Ui.Col(def.LossText, def.Tier == "high" ? Look.High : def.Tier == "mid" ? Look.MidHi : Look.Bone)}";
+                if (Id == SideBets.Pairs.Table)
+                {
+                    var sb = SideBets.Pairs;
+                    odds.text += $"\n<size=15>{Ui.Col("SIDE: PAIRS", Look.Gold)} {Ui.Money(sb.Mins * Vig.Sim.Data.Tables.LimitsOf(def, s.Floor).Min)}  {Ui.Col("WIN", Look.Smoke)} {Pct(SideBets.WinP(sb))}  {Ui.Col("PAYS", Look.Smoke)} PAIR {sb.Mixed}:1, COLOR {sb.Colored}:1, SUITED {sb.Suited}:1  {Ui.Col("RTP", Look.Smoke)} {SideBets.ExactRtp(sb):0.###}</size>";
+                }
             }
             string f = System.Math.Abs(factor - 1) > 1e-9 ? Ui.Col($"   PAYOUTS x{factor:0.##}", factor < 1 ? Look.Blood : Look.Low) : "";
             string oc = me.Overclock > 0 ? Ui.Col("   OVERCLOCK x2", Look.Soul) : "";
@@ -120,7 +125,10 @@ namespace Vig.Client
                     var v = TwentyOne.HandValue(cards);
                     sb.Append(i == h.Active ? "> " : "  ").Append(string.Join(" ", cards.Select(Card))).Append(cards.Count > 0 ? Ui.Col($"   {(v.soft ? "SOFT " : "")}{v.total}", Look.Brass) : "").Append('\n');
                 }
-                return $"<size=24>{sb}</size>" + RegularsLine(h.Regulars, false);
+                string side = "";
+                if (h.Side > 0 && (Deal?.Shown(0, 2) ?? 2) >= 2)
+                    side = "\n<size=18>" + (h.SideRet > 0 ? Ui.Col($"PAIRS: {h.SideWord}! {Ui.Money(h.SideRet)} COMING", Look.Gold) : Ui.Col("PAIRS: NO PAIR", Look.Smoke)) + "</size>";
+                return $"<size=24>{sb}</size>" + RegularsLine(h.Regulars, false) + side;
             }
             if (t.Pending != null)
                 return Ui.Col(Id == "bandit" ? "THE REELS SPIN..." : Id == "wheel" ? "THE WHEEL TURNS..." : Id == "redline" || Id == "twentyone" ? "THE CARD TURNS..."

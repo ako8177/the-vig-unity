@@ -138,3 +138,10 @@ PixelLab spend: 0.
   Dot calls out Ike when his card really was the dealer's bust card.
 - **Checks**: a 100,000-hand measurement shows your return with them at the table is the printed 0.992;
   golden traces regenerated. 254 green. Shot 48 (the table over your shoulder).
+
+## 2026-10-16: side bets (U30)
+
+- **PAIRS at Twenty-One**: toggle it beside DEAL; the table minimum rides on your first two cards being a pair
+  (6:1, 12:1 one color, 25:1 one suit; returns 0.939, measured 0.928 over 100,000 hands). Its odds are on the
+  table screen and the toggle; the screen calls it as soon as your second card lands.
+- 257 checks green (golden traces regenerated: the hand state carries the side bet).

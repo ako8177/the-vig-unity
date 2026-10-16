@@ -321,8 +321,10 @@ namespace Vig.Sim.Tables
                 words.Add(word);
                 res.Add(new HandResult { Cards = h.Cards.Select(c => c.Clone()).ToList(), Bet = h.Bet, Ret = ret });
             }
-            int bet = res.Sum(r => r.Bet), retT = res.Sum(r => r.Ret);
+            // the side bet was judged on the deal; it lands with the hand
+            int bet = res.Sum(r => r.Bet) + hand.Side, retT = res.Sum(r => r.Ret) + hand.SideRet;
             string text = string.Join(" / ", words);
+            if (hand.Side > 0) text += hand.SideRet > 0 ? $" + {hand.SideWord}" : " (NO PAIR)";
             if (retT > bet) text += $": ${retT}";
             hand.Stage = "done";
             return new Outcome
@@ -379,8 +381,12 @@ namespace Vig.Sim.Tables
                 if (t.Hand != null && t.Hand.Stage == "play") return StartResult.Refuse("finish the hand");
                 if (!BetOf(g, Def, cmd.Amount, out int b, out string why)) return StartResult.Refuse(why);
                 int amount = Rules.StakeFor(p, b);
+                // PAIRS rides beside the hand at the table minimum (U30)
+                int side = cmd.Call == SideBets.Pairs.Id ? SideBets.Pairs.Mins * Data.Tables.LimitsOf(Def, g.State.Floor).Min : 0;
+                if (side > 0 && g.State.Bank < amount + side) return StartResult.Refuse("the bank can't cover the side bet too");
                 var no = Stake(g, amount);
                 if (no != null) return StartResult.Refuse(no);
+                if (side > 0) Stake(g, side);
                 if (t.Shoe == null || t.Shoe.Count < ReshuffleAt)
                 {
                     t.Shoe = Shuffle(g);
@@ -405,6 +411,13 @@ namespace Vig.Sim.Tables
                     Dealer = dealer,
                     Regulars = regs,
                 };
+                if (side > 0)
+                {
+                    var (word, pays) = SideBets.Judge(SideBets.Pairs, mine[0], mine[1]);
+                    t.Hand.Side = side;
+                    t.Hand.SideWord = word;
+                    t.Hand.SideRet = pays > 0 ? Js.RoundInt(side * (pays + 1) * Rules.PayoutFactor(g, p, Id)) : 0;
+                }
                 if (IsNatural(dealer)) return StartResult.Of(Settle(g, p));
                 // first base plays before you
                 foreach (var r in regs) if (Regulars.ById(r.Who).Seat == 0) PlayRegular(g, t.Hand, r);

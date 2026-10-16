@@ -24,6 +24,8 @@ Wins 43% of hands, pushes 9%. Returns $0.99 with perfect play.
 Two regulars share the shoe: **Dot** at first base (your right) plays the book and acts before you;
 **Ike** at third base (your left) plays a hunch (he hits to 17 like the dealer) and acts after you.
 Their money is their own, and the cards they take don't change your odds.
+**PAIRS** (side bet, toggle it beside DEAL): the table minimum rides on your first two cards making
+a pair. Any pair 6:1, a pair of one color 12:1, a pair of one suit 25:1. Wins 7.4%. Returns $0.94.
 
 ## The lounge: mid risk (yellow). Losing costs the bet and a mark.
 

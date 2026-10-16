@@ -456,3 +456,23 @@ dealer gives back about 6.5%: he busts first and is never paid 3:2 for it).
 Ike's last card would have busted the dealer had Ike stood (it would have been the dealer's next draw, every
 later draw one later). Only then does Dot say so. It's the oldest table superstition, and here it's true
 when it's said.
+
+## 14. Side bets: PAIRS at Twenty-One (U30)
+
+PAIRS rides beside a Twenty-One hand at the table minimum ($50 on floor 1): it pays if your first two
+cards are a pair. From a fresh six-deck shoe, with your first card out, 311 cards are left and 23 of them
+match its rank: 5 of its own suit, 6 of the other suit of its color, 12 of the other color.
+
+| pair | ways in 311 | pays | returns |
+|---|---|---|---|
+| suited (same suit) | 5 | 25:1 | 26 × 5/311 = 0.418 |
+| color (same color) | 6 | 12:1 | 13 × 6/311 = 0.251 |
+| mixed | 12 | 6:1 | 7 × 12/311 = 0.270 |
+| **total** | 23 (7.4%) | | **0.939** |
+
+A low table's slow loss (RTP under 1, losing costs the stake), the long shot a gambler wants and every number of
+it printed on the screen and the toggle. The pays were chosen for that return: 6/12/25 sits under 1 the way the
+Bandit's 0.95 does; 8/15/30 would cross it. The shoe in play isn't fresh, so a single hand's chance drifts a
+little with what's been dealt; the printed figure is the fresh shoe's, as Twenty-One's own RTP is the endless
+shoe's. SimCheck measures it over 100,000 hands: 0.928, inside ±0.051 of 0.939 (one bet's spread is about 4 per
+$1). The side bet's payout takes your payout factor (marks, Cold Deck), as every payout does.
