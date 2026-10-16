@@ -158,3 +158,5 @@ PixelLab spend: 0.
 - **Crash's crowd**: five railbirds at the Furnace that lean in, put their fists up and shake as the climb nears
   5x, and groan at every crash. Shot 49.
 - 275 checks green.
+- **Charm icons** (U33): all twenty charms have a pixel-art picture on their catalogue card
+  (`pixel-art/charm-icons/build.py`; rerun it to redraw them).

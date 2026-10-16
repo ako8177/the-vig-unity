@@ -119,6 +119,20 @@ namespace Vig.Client
                     Ui.Text("name", card, def.Name.ToUpperInvariant(), 30, Color.white, TextAlignmentOptions.Top, new Vector2(0, 1), new Vector2(1, 1), new Vector2(16, -70), new Vector2(-16, -18), true);
                     Ui.Text("price", card, $"{def.Price} MARKERS", 22, Look.Marker, TextAlignmentOptions.Top, new Vector2(0, 1), new Vector2(1, 1), new Vector2(16, -104), new Vector2(-16, -72), true);
                     Ui.Text("text", card, string.Join(" ", def.Text), 22, new Color(0.85f, 0.95f, 0.88f), TextAlignmentOptions.Top, new Vector2(0, 0), new Vector2(1, 1), new Vector2(18, 90), new Vector2(-18, -120));
+                    // its picture (U33), drawn pixel by pixel in pixel-art/charm-icons, shown crisp at 3x
+                    var icon = Resources.Load<Texture2D>("VigIcons/" + def.Id);
+                    if (icon)
+                    {
+                        var go = new GameObject("icon", typeof(RectTransform), typeof(RawImage));
+                        var rt = (RectTransform)go.transform;
+                        rt.SetParent(card, false);
+                        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0);
+                        rt.offsetMin = new Vector2(-48, 206);
+                        rt.offsetMax = new Vector2(48, 302);
+                        var ri = go.GetComponent<RawImage>();
+                        ri.texture = icon;
+                        ri.raycastTarget = false;
+                    }
                     // what it changes, in numbers (U31): the card's middle was empty
                     if (def.Change != null)
                     {

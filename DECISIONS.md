@@ -160,3 +160,9 @@ Every decision with its reason. The TS game's log (#1-#87) is frozen in `docs/DE
 - **U32 2026-10-16: Crash gets a crowd.** Three more railbirds at the Furnace's monitor on floor 2; as the climb
   nears 5x they lean in, raise their fists and shake; every crash gets a groan. Presentation, plus three NPC
   colliders on floor 2 (clear of the stand points and the walk in; checked).
+- **U33 2026-10-16: Every charm has a picture.** Twenty 32x32 pixel-art icons, drawn by one build script
+  (`pixel-art/charm-icons/build.py`, one 25-color palette, light from the top left, a dark outline) into
+  `Assets/Vig/Resources/VigIcons/`, imported point-filtered and uncompressed (`IconImport.cs`) and shown at 3x on
+  the catalogue's cards. Pixel art in a clean-neon game on purpose: the catalogue is a printed mail-order page.
+  None copies a reference; each is the charm's own object (a fuse with a clover in the glass, a croupier's wheel,
+  snake eyes beside the snake).
