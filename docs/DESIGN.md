@@ -493,3 +493,33 @@ center still costs you Peg Drop's payouts, so the rotation lesson holds. Hot Sho
 the way Lucky Seven does the Bandit (0.950 → 1.070). Double Vision is cheap because PAIRS is a $50 bet.
 
 Every charm card in the catalogue now prints what it changes, before → after where it's a number.
+
+## 16. Side bets: craps' one-roll bets (U34)
+
+A one-roll bet rides beside any throw at the table minimum ($100 on floor 2): the come-out or a roll for the
+point. That throw alone settles it, win or lose, and the pass line goes on as it was. Toggle one beside THROW;
+it rides every throw until you turn it off. Two dice make 36 throws; each bet's pays are set so the house keeps
+2 of them:
+
+| bet | wins on | ways in 36 | pays | returns |
+|---|---|---|---|---|
+| FIELD | 2, 3, 4, 9, 10, 11, 12 | 16 (44%) | 1:1; 2 and 12 pay 2:1 | (14×2 + 2×3)/36 = **0.944** |
+| ANY CRAPS | 2, 3, 12 | 4 (11%) | 15:2 | 4 × 8.5/36 = **0.944** |
+| ELEVEN | 11 | 2 (5.6%) | 16:1 | 2 × 17/36 = **0.944** |
+
+The same return on all three, the way roulette's bets all return 36/37: the choice is how you want to lose it,
+often and small or rarely and big, never which one is the trap. All three sit under 1, the low tier's slow loss,
+and under the pass line's 0.986, so a side bet is always the worse bet, printed. ANY CRAPS on the come-out is
+a hedge: the throws that lose the line pay it 15:2. That is a real casino's use for it and it's fair to know.
+(Hot Shooter already hands the line back on those throws, so the charm and the hedge don't stack into anything
+new: each keeps its own number.)
+
+Settling: when the line settles on the same throw, the side bet lands in the same result (its stake and return
+are added to the round's); otherwise the throw lands as a round of its own for the side bet alone, its dice on
+the felt and its verdict on the screen under the point. With a side bet in the round, a win is what came out
+ahead (U24). The payout takes your payout factor, as every payout does. SimCheck throws each bet 40,000 times
+beside the line, checks every payout against the dice it was judged on, and measures the return inside four
+spreads of 0.944 (FIELD ±0.022, ANY CRAPS ±0.053, ELEVEN ±0.078).
+
+Real casinos pay these 2:1/3:1 (or 2:1/2:1), 7:1 and 15:1. Ours are re-derived from the one rule: the same 34/36
+on each.

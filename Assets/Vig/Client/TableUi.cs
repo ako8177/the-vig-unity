@@ -35,6 +35,19 @@ namespace Vig.Client
         int crashAuto;
         /// <summary>the PAIRS side bet rides with each deal (U30)</summary>
         bool sidePairs;
+        /// <summary>craps' one-roll bet riding with each throw: 0 none, else 1 + its index in SideBets.OneRoll (U34)</summary>
+        int crapsSide;
+        OneRollDef CrapsOneRoll => crapsSide == 0 ? null : SideBets.OneRoll[crapsSide - 1];
+
+        /// <summary>Turn a side bet on by its call (null: off), as its button would; the screenshot sweep uses it.</summary>
+        public void PickSide(string table, string call)
+        {
+            if (table == "twentyone") sidePairs = call == SideBets.Pairs.Id;
+            if (table == "craps") crapsSide = Array.FindIndex(SideBets.OneRoll, d => d.Id == call) + 1;
+        }
+
+        /// <summary>The side bet toggled on at this table, as the command's call (null: none); the keys use it too.</summary>
+        public string SideCall(string table) => table == "twentyone" ? (sidePairs ? SideBets.Pairs.Id : null) : table == "craps" ? CrapsOneRoll?.Id : null;
         static readonly double[] AutoSteps = { 0, 1.5, 2, 3, 5, 10 };
         int dismissedRide = -1;
         public bool Visible { get; private set; }
@@ -142,6 +155,9 @@ namespace Vig.Client
             return b;
         }
 
+        /// <summary>a side bet's button while it rides: a deep gold that keeps white text readable</summary>
+        static readonly Color SideOn = new Color(0.36f, 0.26f, 0.04f);
+
         static Color Tint(Color c, float k) => new Color(c.r * k, c.g * k, c.b * k, 1);
 
         void BuildTable(string table, Game g)
@@ -178,7 +194,7 @@ namespace Vig.Client
                     Action("black", "BLACK", new Color(0.08f, 0.08f, 0.1f), () => send(Command.CallIt(table, "black", Bet(table))), 1, 2, 36);
                     break;
                 case "twentyone":
-                    Action("deal", "DEAL", Tint(tc, 0.35f), () => send(new Command { T = "bet", Table = table, Amount = Bet(table), Call = sidePairs ? SideBets.Pairs.Id : null }), 0, 4, 32);
+                    Action("deal", "DEAL", Tint(tc, 0.35f), () => send(new Command { T = "bet", Table = table, Amount = Bet(table), Call = SideCall(table) }), 0, 4, 32);
                     Action("pairs", "", Btn, () => sidePairs = !sidePairs, 1, 4, 20);
                     Action("hit", "HIT", Btn, () => send(Command.CallIt(table, "hit")), 0, 4);
                     Action("stand", "STAND", Btn, () => send(Command.CallIt(table, "stand")), 1, 4);
@@ -189,7 +205,10 @@ namespace Vig.Client
                 case "wheel": Action("go", "SPIN THE WHEEL", Tint(tc, 0.35f), () => send(Command.Spin(table, Bet(table))), 0, 1, 36); break;
                 case "deadman": Action("go", "THROW THE DICE", Tint(tc, 0.4f), () => send(Command.Spin(table, Bet(table))), 0, 1, 36); break;
                 case "pegdrop": Action("go", "DROP THE BALL", Tint(tc, 0.35f), () => send(Command.Spin(table, Bet(table))), 0, 1, 36); break;
-                case "craps": Action("go", "THROW THE DICE", Tint(tc, 0.35f), () => send(Command.Spin(table, Bet(table))), 0, 1, 36); break;
+                case "craps":
+                    Action("go", "THROW THE DICE", Tint(tc, 0.35f), () => send(new Command { T = "spin", Table = table, Amount = Bet(table), Call = SideCall(table) }), 0, 2, 32);
+                    Action("side", "", Btn, () => crapsSide = (crapsSide + 1) % (SideBets.OneRoll.Length + 1), 1, 2, 20);
+                    break;
                 case "roulette": Action("go", "SPIN", Tint(tc, 0.35f), () => send(Command.CallIt(table, rouletteCall, Bet(table))), 0, 1, 36); break;
                 case "crash":
                     Action("go", "LAUNCH", Tint(tc, 0.4f), () => send(new Command { T = "spin", Table = table, Amount = Bet(table), Call = crashAuto > 0 ? AutoSteps[crashAuto].ToString(System.Globalization.CultureInfo.InvariantCulture) : null }), 0, 3, 34);
@@ -320,7 +339,7 @@ namespace Vig.Client
                     int sideAmt = sbd.Mins * Vig.Sim.Data.Tables.LimitsOf(Vig.Sim.Data.Tables.ById(seat), s.Floor).Min;
                     named["pairs"].gameObject.SetActive(!play);
                     named["pairs"].interactable = !busy;
-                    named["pairs"].image.color = sidePairs ? new Color(0.55f, 0.42f, 0.08f) : Btn;
+                    named["pairs"].image.color = sidePairs ? SideOn : Btn;
                     Ui.Label(named["pairs"], (sidePairs ? "PAIRS: ON  +" : "PAIRS: OFF  ") + Ui.Money(sideAmt) + $"\n<size=15>{sbd.Mixed}:1 · {sbd.Colored}:1 · {sbd.Suited}:1</size>");
                     foreach (var k in new[] { "hit", "stand", "double", "split" }) named[k].gameObject.SetActive(play);
                     named["double"].interactable = o.dbl && s.Bank >= t.Hand?.Hands[t.Hand.Active].Bet;
@@ -341,10 +360,22 @@ namespace Vig.Client
                     break;
                 }
                 case "craps":
+                {
+                    // the one-roll bet: which, its price and pays on the button, its odds on the card
+                    var one = CrapsOneRoll;
+                    int sideAmt = (one?.Mins ?? 1) * Vig.Sim.Data.Tables.LimitsOf(def, s.Floor).Min;
+                    bool sideOk = one == null || s.Bank >= sideAmt + (t.Point == 0 ? stake : 0);
                     Ui.Label(named["go"], t.Point == 0 ? "THROW: COME OUT" : $"THROW FOR THE {t.Point}");
-                    named["go"].interactable = !busy && (t.Point != 0 || canBet);
+                    named["go"].interactable = !busy && (t.Point != 0 || canBet) && sideOk;
+                    named["side"].interactable = !busy;
+                    named["side"].image.color = one != null ? SideOn : Btn;
+                    Ui.Label(named["side"], one == null ? "ONE ROLL: OFF\n<size=15>FIELD · ANY CRAPS · ELEVEN</size>" : $"ONE ROLL: {one.Name}  +{Ui.Money(sideAmt)}\n<size=15>{one.PaysText}</size>");
+                    if (one != null && !Rules.HasTeamMark(g, "blackout"))
+                        oddsText.text += $"\n{Ui.Col("ONE ROLL", Look.Gold)} {one.Name}  {Ui.Col("WIN", Look.Smoke)} {Ui.Col($"{SideBets.WinP(one) * 100:0}%", tc)}  {Ui.Col("PAYS", Look.Smoke)} {one.PaysShort}  {Ui.Col("RETURNS", Look.Smoke)} ${SideBets.ExactRtp(one):0.00}";
                     if (t.Point != 0) status = $"THE POINT IS {t.Point}: HIT IT AGAIN BEFORE A 7. YOUR {Ui.Money(t.PointBet)} RIDES.";
+                    if (!sideOk && !busy) status = Ui.Col("THE BANK CAN'T COVER THE ONE-ROLL BET TOO", Look.Blood);
                     break;
+                }
                 case "roulette":
                     foreach (var kv in layoutCells)
                     {

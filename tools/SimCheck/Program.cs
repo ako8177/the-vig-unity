@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text.Json;
 using Vig.Sim;
 using Vig.Sim.Data;
+using Vig.Sim.Systems;
 using Vig.Sim.Tables;
 
 static class Program
@@ -253,6 +254,7 @@ static class Program
                                     case "roulette": c = Command.CallIt(id, d.Pick(new[] { "red", "black", "odd", "even", "low", "high", "d1", "d2", "d3", "n0", "n17", "n36", "bogus" }), amt); break;
                                     case "twentyone": c = s.Tables[id].Hand?.Stage == "play" ? Command.CallIt(id, d.Pick(new[] { "hit", "stand", "double", "split" })) : new Command { T = "bet", Table = id, Amount = amt, Call = d.Next() < 0.3 ? "pairs" : null }; break;
                                     case "crash": c = s.Tables[id].Crash != null ? Command.CallIt(id, "cash") : new Command { T = "spin", Table = id, Amount = amt, Call = d.Next() < 0.5 ? "3" : null }; break;
+                                    case "craps": c = new Command { T = "spin", Table = id, Amount = amt, Call = d.Next() < 0.4 ? d.Pick(new[] { "field", "anycraps", "eleven", "bogus" }) : null }; break;
                                     default: c = Command.Spin(id, amt); break;
                                 }
                                 double r2 = d.Next();
@@ -345,6 +347,7 @@ static class Program
     static void RuleChecks()
     {
         RegularsCheck(100000);
+        OneRollCheck(40000);
         CharmMath();
         // DECISIONS U5: a locked charm can't come off the Boon wheel; an unlocked one can
         var locked = BoonCharms(new string[0]);
@@ -425,6 +428,56 @@ static class Program
         Check(Math.Abs(shooter - 1.097) < 0.0005, $"charm math: Hot Shooter's craps returns {shooter:0.0000}, not 1.097");
         Check(Math.Abs(vision - 359 / 311.0) < 1e-9, $"charm math: Double Vision's PAIRS returns {vision:0.0000}, not 1.154");
         Console.WriteLine($"ok   charm math: Center Pin {pin:0.000}, Hot Shooter {shooter:0.000}, Double Vision {vision:0.000}, Tailwind at 3x {3 * Crash.Reach(3) * 1.1:0.000}");
+    }
+
+    /// <summary>U34: craps' one-roll bets, thrown n times each beside the pass line on floor 2. Every bet's
+    /// return is checked against the dice it was judged on, and measured against its printed 34/36.</summary>
+    static void OneRollCheck(int n)
+    {
+        foreach (var d in SideBets.OneRoll)
+        {
+            double exact = SideBets.ExactRtp(d);
+            Check(Derived(d.Derivation), $"data: the one-roll bet {d.Id} lacks a derivation");
+            Check(exact < 1, $"data: {d.Name} returns {exact:0.000}: a side bet at a low table must be a slow loss");
+            Check(Math.Abs(exact - 34 / 36.0) < 1e-9, $"data: {d.Name} returns {exact:0.0000}, not the 34/36 its derivation says");
+            var g = new Game(new GameOpts { Seed = 3400u + (uint)Array.IndexOf(SideBets.OneRoll, d), Players = 1, StartFloor = 2 });
+            var b = new Pace.Bot(g);
+            b.Sit("craps");
+            var t = g.State.Tables["craps"];
+            int side = d.Mins * Vig.Sim.Data.Tables.LimitsOf(Vig.Sim.Data.Tables.ById("craps"), g.State.Floor).Min;
+            double staked = 0, back = 0;
+            int throws = 0, alone = 0, wrong = 0;
+            while (throws < n)
+            {
+                g.State.Clock = State.NightTicks;
+                g.State.Bank = 1000000;
+                bool pointOn = t.Point != 0;
+                int lineBet = t.PointBet;
+                g.Submit(0, new Command { T = "spin", Table = "craps", Call = d.Id }); g.Step();
+                var o = t.Pending;
+                if (o == null) { Check(false, $"one-roll: a throw with {d.Name} riding landed nothing"); return; }
+                TablesSystem.Land(g, "craps");
+                g.DrainEvents();
+                int sum = o.Dice[0] + o.Dice[1];
+                int due = d.Pays[sum] > 0 ? Js.RoundInt(side * (d.Pays[sum] + 1)) : 0;
+                if (o.Bet == side && t.Point != 0) { alone++; if (o.Ret != due) wrong++; }
+                else
+                {
+                    // the line settled on this throw: what's left of the return after the side bet is the line's
+                    int line = o.Ret - due, stake = o.Bet - side;
+                    if (line != 0 && line != stake && line != 2 * stake) wrong++;
+                    if (pointOn && stake != lineBet) wrong++;
+                }
+                staked += side; back += due; throws++;
+            }
+            // one throw's spread per $1, from the bet's own pays: four of them over n throws is the tolerance
+            double sq = 0; for (int k = 2; k <= 12; k++) sq += (6 - Math.Abs(k - 7)) / 36.0 * (d.Pays[k] > 0 ? (d.Pays[k] + 1) * (d.Pays[k] + 1) : 0);
+            double rtp = back / staked, tol = 4 * Math.Sqrt(sq - exact * exact) / Math.Sqrt(n);
+            Check(wrong == 0, $"one-roll: {d.Name} paid the wrong amount on {wrong} of {n} throws");
+            Check(alone > n / 3, $"one-roll: {d.Name} rode only {alone} throws while the point was on");
+            Check(Math.Abs(rtp - exact) < tol, $"one-roll: {d.Name} returned {rtp:0.000} over {n} throws, not the printed {exact:0.000} (±{tol:0.000})");
+            Console.WriteLine($"ok   one-roll: {d.Name} {rtp:0.000} over {n} throws (printed {exact:0.000} ±{tol:0.000}, wins {SideBets.WinP(d):P1}; {alone} on a point)");
+        }
     }
 
     /// <summary>U29: the regulars share your shoe but not your odds. Play `n` hands of basic strategy with them

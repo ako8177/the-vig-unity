@@ -438,7 +438,7 @@ namespace Vig.Client
                     if (kb.bKey.wasPressedThisFrame) Send(Command.CallIt(table, "black", amount));
                     break;
                 case "twentyone":
-                    if (kb.spaceKey.wasPressedThisFrame) Send(Command.Bet(table, amount));
+                    if (kb.spaceKey.wasPressedThisFrame) Send(new Command { T = "bet", Table = table, Amount = amount, Call = ui.SideCall(table) });
                     if (kb.hKey.wasPressedThisFrame) Send(Command.CallIt(table, "hit"));
                     if (kb.sKey.wasPressedThisFrame) Send(Command.CallIt(table, "stand"));
                     if (kb.dKey.wasPressedThisFrame) Send(Command.CallIt(table, "double"));
@@ -446,6 +446,9 @@ namespace Vig.Client
                     break;
                 case "crash":
                     if (kb.spaceKey.wasPressedThisFrame) Send(G.State.Tables["crash"].Crash != null ? Command.CallIt(table, "cash") : Command.Spin(table, amount));
+                    break;
+                case "craps":
+                    if (kb.spaceKey.wasPressedThisFrame) Send(new Command { T = "spin", Table = table, Amount = amount, Call = ui.SideCall(table) });
                     break;
                 case "roulette":
                     break;

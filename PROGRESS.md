@@ -160,3 +160,16 @@ PixelLab spend: 0.
 - 275 checks green.
 - **Charm icons** (U33): all twenty charms have a pixel-art picture on their catalogue card
   (`pixel-art/charm-icons/build.py`; rerun it to redraw them).
+
+## 2026-10-24: craps' one-roll bets (U34)
+
+- **FIELD, ANY CRAPS, ELEVEN**: a toggle beside THROW cycles through them; the table minimum rides on each
+  throw, come-out or point, settled by that throw alone. All three return 34/36 = 0.944 (DESIGN.md §16), under
+  the pass line's 0.986; chance, pays and return are on the screen, the odds card and the button. A throw that
+  leaves the line riding shows the side bet's verdict under the point.
+- Space throws with the side bet too, and now deals with PAIRS at Twenty-One (it ignored the toggle before).
+- 293 checks green: each bet thrown 40,000 times beside the line, every payout checked against its dice (FIELD
+  0.952, ANY CRAPS 0.943, ELEVEN 0.969, all inside their spreads); no golden trace moved. Shot 50.
+- The table screen's odds box holds one small line, so the three bets share one (13pt); the first draft's two
+  lines ran into BET. Shots 39 and 50 looked at.
+- Written on 2026-10-16; that session stopped before committing, and this one checked and committed it.

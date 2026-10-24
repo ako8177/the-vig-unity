@@ -2,7 +2,12 @@
 
 Read this first, every session.
 
-## Where things stand (2026-10-16)
+## Where things stand (2026-10-24)
+
+**Latest**: craps' one-roll bets (U34: FIELD, ANY CRAPS, ELEVEN, each returning 34/36) are committed. They were
+written on 2026-10-16 by a session that stopped before committing; on 2026-10-24 they were checked (SimCheck
+293 green, shots looked at) and committed. **Ask the owner** whether the side bets earn their button.
+
 
 The big pass (DECISIONS U15-U25, PROGRESS.md) is in, then the pace bots (U26), pause/settings/results and
 chips on the felt (U27), and a fast boot with working bloom in the build (U28). The big pass: clickable tables, real dice, floor 2 with four new
@@ -17,8 +22,8 @@ usage limit before committing; their work was committed as it stood (people: U13
 
 ## Next (in order, unless the owner picks)
 
-1. **More side bets** where they fit (craps' one-roll bets, a roulette straight-up already exists). PAIRS at
-   Twenty-One is in (U30), and the regulars (U29).
+1. **More side bets** where they fit: PAIRS at Twenty-One (U30) and craps' one-roll bets (U34) are in; a
+   roulette straight-up already exists. Next candidates: Crash or Peg Drop, only if one earns its place.
 2. **Floor 2's people**: dealers at roulette (spin the ball), craps (the stickman), a crowd that watches Crash.
 3. **The house's furniture** modelled in Blender (the couch, the TV, the car), the family's own look.
 4. A Collector of floor 2's own.

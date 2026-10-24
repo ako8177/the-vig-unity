@@ -76,7 +76,8 @@ namespace Vig.Sim.Tables
 
     /// <summary>The pass line. The come-out roll: 7 or 11 wins even money, 2, 3 or 12 loses, anything else is the
     /// point; then roll until the point comes again (win) or a 7 (lose). Wins 244 of 495: RTP 0.986. The stake
-    /// goes down on the come-out and rides every roll; at 0:00 a bet on a point comes back.</summary>
+    /// goes down on the come-out and rides every roll; at 0:00 a bet on a point comes back. A one-roll bet (the
+    /// command's call: field, anycraps, eleven) can ride beside any throw (U34, DESIGN.md §16).</summary>
     public sealed class Craps : TableModule
     {
         public override string Id => "craps";
@@ -96,22 +97,48 @@ namespace Vig.Sim.Tables
         {
             if (cmd.T != "spin") return StartResult.Refuse("roll the dice");
             var t = g.State.Tables[Id];
+            // a one-roll bet rides beside this throw at the table minimum (U34)
+            var one = cmd.Call == null ? null : SideBets.OneRollById(cmd.Call);
+            if (cmd.Call != null && one == null) return StartResult.Refuse("no such side bet");
+            int side = one == null ? 0 : one.Mins * Data.Tables.LimitsOf(Def, g.State.Floor).Min;
             int bet = t.PointBet;
             if (t.Point == 0)
             {
+                if (side > 0 && BetOf(g, Def, cmd.Amount, out int b, out _) && g.State.Bank < Rules.StakeFor(p, b) + side)
+                    return StartResult.Refuse("the bank can't cover the side bet too");
                 var no = TakeStake(g, p, cmd, out bet);
                 if (no.HasValue) return no.Value;
                 t.PointBet = bet;
             }
+            else if (side > 0 && g.State.Bank < side) return StartResult.Refuse("the bank can't cover the side bet");
+            if (side > 0) Stake(g, side);
             int d0 = g.Rng.Int(1, 6), d1 = g.Rng.Int(1, 6), sum = d0 + d1;
             double factor = Rules.PayoutFactor(g, p, Id);
-            Outcome Done(bool win, string text)
+            int sideRet = side > 0 && one.Pays[sum] > 0 ? Js.RoundInt(side * (one.Pays[sum] + 1) * factor) : 0;
+            string sideText = side == 0 ? "" : sideRet > 0 ? $" + {one.Name} ${sideRet}" : $" ({one.Name} LOSES)";
+            Outcome Done(bool win, string text, int? lineRet = null)
             {
-                int ret = win ? Js.RoundInt(bet * Def.Pays.Value * factor) : 0;
-                var o = new Outcome { Table = Id, Player = p.Id, Bet = bet, Ret = ret, Win = win, Factor = factor, Dice = new List<int> { d0, d1 }, Point = t.Point, Text = win ? $"{text}: ${ret}" : text };
+                int ret = lineRet ?? (win ? Js.RoundInt(bet * Def.Pays.Value * factor) : 0);
+                var o = new Outcome { Table = Id, Player = p.Id, Bet = bet + side, Ret = ret + sideRet, Win = win, Factor = factor, Dice = new List<int> { d0, d1 }, Point = t.Point, Call = one?.Id, Text = (win ? $"{text}: ${ret}" : text) + sideText };
+                // with a side bet riding, a win is what came out ahead (U24: no feelings faked)
+                if (side > 0) o.Win = o.Ret > o.Bet;
                 t.Point = 0;
                 t.PointBet = 0;
                 return o;
+            }
+            // a throw that leaves the line riding settles only the side bet: it lands like a round of its own
+            StartResult Rolled(string text)
+            {
+                if (side == 0)
+                {
+                    g.Emit(new SimEvent { T = "roll", Player = p.Id, Table = Id, Dice = new List<int> { d0, d1 }, Point = t.Point, Text = text, Ticks = Rules.Ticks(Def.ResolveS) });
+                    return StartResult.Pending;
+                }
+                return StartResult.Of(new Outcome
+                {
+                    Table = Id, Player = p.Id, Bet = side, Ret = sideRet, Win = sideRet > side, Factor = factor, Dice = new List<int> { d0, d1 }, Point = t.Point, Call = one.Id, LineRides = true,
+                    Text = $"{sum}: {one.Name} {(sideRet > 0 ? $"WINS ${sideRet}" : "LOSES")}. THE POINT IS {t.Point}",
+                });
             }
             if (t.Point == 0)
             {
@@ -120,18 +147,14 @@ namespace Vig.Sim.Tables
                 {
                     // Hot Shooter: the come-out's craps hand the bet back (DESIGN.md §15)
                     if (!p.Charms.Contains("shooter")) return StartResult.Of(Done(false, $"{sum}: CRAPS"));
-                    var push = Done(false, $"{sum}: CRAPS, BUT THE HOT SHOOTER GETS THE BET BACK");
-                    push.Ret = bet;
-                    return StartResult.Of(push);
+                    return StartResult.Of(Done(false, $"{sum}: CRAPS, BUT THE HOT SHOOTER GETS THE BET BACK", bet));
                 }
                 t.Point = sum;
-                g.Emit(new SimEvent { T = "roll", Player = p.Id, Table = Id, Dice = new List<int> { d0, d1 }, Point = sum, Text = $"THE POINT IS {sum}", Ticks = Rules.Ticks(Def.ResolveS) });
-                return StartResult.Pending;
+                return Rolled($"THE POINT IS {sum}");
             }
             if (sum == t.Point) return StartResult.Of(Done(true, $"{sum}: THE POINT"));
             if (sum == 7) return StartResult.Of(Done(false, "7: SEVEN OUT"));
-            g.Emit(new SimEvent { T = "roll", Player = p.Id, Table = Id, Dice = new List<int> { d0, d1 }, Point = t.Point, Text = $"{sum}. THE POINT IS {t.Point}", Ticks = Rules.Ticks(Def.ResolveS) });
-            return StartResult.Pending;
+            return Rolled($"{sum}. THE POINT IS {t.Point}");
         }
     }
 

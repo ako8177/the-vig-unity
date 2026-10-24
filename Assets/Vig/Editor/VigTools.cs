@@ -402,6 +402,14 @@ namespace Vig.EditorTools
             list.Add(Seated("38_roulette_landed", "roulette", 200, play => { }));
             list.Add(Seated("39_craps_throw", "craps", 40, play => play.G.Submit(0, Command.Spin("craps"))));
             list.Add(Seated("40_craps_rest", "craps", 160, play => { }));
+            // a one-roll bet (U34): FIELD rides each throw; throw until the point is on, then once more
+            list.Add(Seated("50_craps_one_roll", "craps", 150, play =>
+            {
+                play.TableBar.PickSide("craps", "field");
+                var t = play.G.State.Tables["craps"];
+                for (int i = 0; i < 12 && t.Point == 0; i++) { play.G.Submit(0, new Command { T = "spin", Table = "craps", Call = "field" }); Run(play, 130); }
+                play.G.Submit(0, new Command { T = "spin", Table = "craps", Call = "field" });
+            }));
             list.Add(Seated("41_pegdrop_falling", "pegdrop", 90, play => play.G.Submit(0, Command.Spin("pegdrop"))));
             list.Add(Seated("42_pegdrop_landed", "pegdrop", 140, play => { }));
             list.Add(Seated("43_crash_climbing", "crash", 150, play => play.G.Submit(0, Command.Spin("crash"))));

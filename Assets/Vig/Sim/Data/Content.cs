@@ -304,6 +304,43 @@ namespace Vig.Sim.Data
             if (a.S < 2 == b.S < 2) return ("COLOR PAIR", d.Colored);
             return ("PAIR", d.Mixed);
         }
+
+        // ---------------------------------------------------------- craps' one-roll bets (U34)
+
+        /// <summary>Craps' one-roll bets (DESIGN.md §16): FIELD, ANY CRAPS, ELEVEN. One rides beside any throw,
+        /// come-out or point, at the table minimum, and is settled by that throw alone. Each returns 34/36.</summary>
+        public static readonly OneRollDef[] OneRoll =
+        {
+            new OneRollDef { Id = "field", Name = "FIELD", PaysText = "1:1, 2 & 12 PAY 2:1", PaysShort = "1:1 (2,12 2:1)", Mins = 1,
+                Pays = new double[] { 0, 0, 2, 1, 1, 0, 0, 0, 0, 1, 1, 1, 2 },
+                Derivation = "DESIGN.md §16: 2, 3, 4, 9, 10, 11, 12 come 16 ways in 36; even money with 2 and 12 at 2:1 returns (14×2 + 2×3)/36 = 34/36 = 0.944" },
+            new OneRollDef { Id = "anycraps", Name = "ANY CRAPS", PaysText = "2, 3 OR 12 PAYS 15:2", PaysShort = "15:2", Mins = 1,
+                Pays = new double[] { 0, 0, 7.5, 7.5, 0, 0, 0, 0, 0, 0, 0, 0, 7.5 },
+                Derivation = "DESIGN.md §16: 2, 3 or 12 come 4 ways in 36; 15:2 returns 4×8.5/36 = 34/36 = 0.944" },
+            new OneRollDef { Id = "eleven", Name = "ELEVEN", PaysText = "11 PAYS 16:1", PaysShort = "16:1", Mins = 1,
+                Pays = new double[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 0 },
+                Derivation = "DESIGN.md §16: 11 comes 2 ways in 36; 16:1 returns 2×17/36 = 34/36 = 0.944" },
+        };
+
+        public static OneRollDef OneRollById(string id) => OneRoll.FirstOrDefault(d => d.Id == id);
+
+        /// <summary>How many of the 36 throws of two dice come to this sum.</summary>
+        static int Ways(int sum) => 6 - System.Math.Abs(sum - 7);
+
+        public static double WinP(OneRollDef d) { double w = 0; for (int s = 2; s <= 12; s++) if (d.Pays[s] > 0) w += Ways(s); return w / 36; }
+
+        public static double ExactRtp(OneRollDef d) { double r = 0; for (int s = 2; s <= 12; s++) if (d.Pays[s] > 0) r += Ways(s) * (d.Pays[s] + 1); return r / 36; }
+    }
+
+    public sealed class OneRollDef
+    {
+        public string Id, Name, PaysText, Derivation;
+        /// <summary>its pays in a few characters, for the table's screen</summary>
+        public string PaysShort;
+        /// <summary>its stake, in the table's minimums</summary>
+        public int Mins;
+        /// <summary>what it pays to one on each sum of the dice, 0..12 (0: it loses)</summary>
+        public double[] Pays;
     }
 
     // ------------------------------------------------------------------ the regulars at Twenty-One (U29)

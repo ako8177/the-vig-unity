@@ -101,6 +101,8 @@ namespace Vig.Sim
         public int? Point;
         /// <summary>the Bandit's progressive, when the whole grid took it</summary>
         public int? Pot;
+        /// <summary>Craps: this throw settled only a one-roll bet and the pass line still rides (U34)</summary>
+        public bool? LineRides;
     }
 
     /// <summary>A Crash round in the air: when it took off, where it will crash, the auto cash-out.</summary>

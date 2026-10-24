@@ -83,6 +83,12 @@ namespace Vig.Client
                     var sb = SideBets.PairsFor(me);
                     odds.text += $"\n<size=15>{Ui.Col("SIDE: PAIRS", Look.Gold)} {Ui.Money(sb.Mins * Vig.Sim.Data.Tables.LimitsOf(def, s.Floor).Min)}  {Ui.Col("WIN", Look.Smoke)} {Pct(SideBets.WinP(sb))}  {Ui.Col("PAYS", Look.Smoke)} PAIR {sb.Mixed}:1, COLOR {sb.Colored}:1, SUITED {sb.Suited}:1  {Ui.Col("RTP", Look.Smoke)} {SideBets.ExactRtp(sb):0.###}</size>";
                 }
+                if (Id == "craps")
+                {
+                    // the one-roll bets all return 34/36: one line (the box holds one small line), each one's chance and pays (U34)
+                    string list = string.Join("  ", SideBets.OneRoll.Select(d => $"{d.Name} {Ui.Col(Pct(SideBets.WinP(d)), tc)} {d.PaysShort}"));
+                    odds.text += $"\n<size=13>{Ui.Col($"ONE ROLL {Ui.Money(SideBets.OneRoll[0].Mins * Vig.Sim.Data.Tables.LimitsOf(def, s.Floor).Min)}", Look.Gold)} {Ui.Col("RTP", Look.Smoke)} {SideBets.ExactRtp(SideBets.OneRoll[0]):0.###}{Ui.Col(":", Look.Smoke)}  {list}</size>";
+                }
             }
             string f = System.Math.Abs(factor - 1) > 1e-9 ? Ui.Col($"   PAYOUTS x{factor:0.##}", factor < 1 ? Look.Blood : Look.Low) : "";
             string oc = me.Overclock > 0 ? Ui.Col("   OVERCLOCK x2", Look.Soul) : "";
@@ -135,7 +141,13 @@ namespace Vig.Client
                     : Id == "roulette" ? "THE BALL RUNS..." : Id == "pegdrop" ? "THE BALL DROPS..." : Id == "crash" ? "..." : "THE DICE ROLL...", Look.Smoke);
             // craps between throws: the point is on and the pass-line bet rides
             if (Id == "craps" && t.Point != 0)
-                return Ui.Col($"THE POINT IS {t.Point}", Look.Gold) + "\n" + Ui.Col($"<size=24>{Ui.Money(t.PointBet)} RIDES: HIT IT AGAIN BEFORE A 7</size>", Look.Smoke);
+            {
+                // the last throw that settled a one-roll bet while the line rode (U34)
+                var lr = t.Last?.LineRides == true && t.Last.Point == t.Point ? t.Last : null;
+                string side = lr == null ? "" : "\n<size=20>" + string.Join(" ", lr.Dice.Select(Die)) + "  " +
+                    Ui.Col($"{SideBets.OneRollById(lr.Call)?.Name} {(lr.Ret > 0 ? "WON " + Ui.Money(lr.Ret) : "LOST")}", lr.Ret > 0 ? Look.LowHi : Look.Smoke) + "</size>";
+                return Ui.Col($"THE POINT IS {t.Point}", Look.Gold) + "\n" + Ui.Col($"<size=24>{Ui.Money(t.PointBet)} RIDES: HIT IT AGAIN BEFORE A 7</size>", Look.Smoke) + side;
+            }
             var o = t.Last;
             if (o == null) return Ui.Col("PLACE YOUR BET", Look.Smoke);
             Color c = o.Win ? Look.LowHi : o.LifeLost == true ? Look.Blood : Look.Bone;

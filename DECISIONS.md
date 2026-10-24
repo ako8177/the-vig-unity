@@ -166,3 +166,11 @@ Every decision with its reason. The TS game's log (#1-#87) is frozen in `docs/DE
   the catalogue's cards. Pixel art in a clean-neon game on purpose: the catalogue is a printed mail-order page.
   None copies a reference; each is the charm's own object (a fuse with a clover in the glass, a croupier's wheel,
   snake eyes beside the snake).
+- **U34 2026-10-16: Craps' one-roll bets: FIELD, ANY CRAPS, ELEVEN.** A toggle beside THROW puts the table minimum on
+  one of them for each throw, come-out or point; each returns exactly 34/36 = 0.944 (DESIGN.md §16), under the pass
+  line's 0.986, with its chance, pays and return printed on the screen, the odds card and the button. A throw that
+  leaves the line riding lands as a round of its own for the side bet (the sim's outcome carries `LineRides`); one
+  that settles the line folds the side bet into its result, as PAIRS does. Space throws with the side bet too, and
+  now deals with PAIRS at Twenty-One (it ignored the toggle before). No golden trace moved: the traces never bet a
+  side bet and new fields are null. **Derivative flag:** the field, any craps and the yo-eleven are real casino craps
+  bets, the genre's own, not a shipped game's; the pays are ours, derived so all three return the same.
